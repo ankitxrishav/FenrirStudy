@@ -23,7 +23,9 @@ Core Features
 
 Quick demo screenshot
 <!-- Replace with your screenshot path or hosted image -->
-![App Screenshot](public/screenshots/dashboard.png)
+![App Screenshot]<img width="1439" height="845" alt="Screenshot 2026-01-02 at 2 24 36 PM" src="https://github.com/user-attachments/assets/11df56e5-8c33-467e-bc33-fba5bb1f422f" />
+<img width="1479" height="852" alt="Screenshot 2026-01-02 at 2 25 07 PM" src="https://github.com/user-attachments/assets/92b35ed6-619a-419d-8a3c-e480e622f786" />
+
 
 Tech Stack
 - Next.js (App Router)

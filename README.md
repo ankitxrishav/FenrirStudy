@@ -1,58 +1,59 @@
-# fenrirstudy 🐺 xyz
+# fenrirstudy 🐺
 
-**Live Demo: [https://fenrirstudy.vercel.app/](https://fenrirstudy.vercel.app/)**
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
+[![Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
+[![Next.js](https://img.shields.io/badge/Framework-Next.js-000000?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/Language-TypeScript-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind](https://img.shields.io/badge/Styling-Tailwind%20CSS-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Database-Firebase-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com/)
+[![License](https://img.shields.io/badge/License-MIT-00A0DF?style=flat-square)](LICENSE)
 
-`fenrirstudy` is a modern, full-stack web application designed to help users track and analyze their study habits. It provides tools to time study sessions, organize subjects, and visualize progress over time, with the goal of enhancing focus and productivity.
+Modern, full-stack study tracker to time sessions, manage subjects, and visualize study habits.
 
-![fenrirstudy Screenshot](https://user-images.githubusercontent.com/12345/your-screenshot-url.png) 
-*Replace with a real screenshot URL after you upload one to your GitHub repo.*
+Screenshots
+- Add screenshots to /public or repo and replace the URL below:
+![fenrirstudy Screenshot](https://user-images.githubusercontent.com/12345/your-screenshot-url.png)
 
----
+Live Demos
+- Vercel: https://fenrirstudy.vercel.app/
+- Netlify: https://fenrirstudy.netlify.app/
 
-### Core Features
+Quick Links
+- Repo: (your repository)
+- Docs: This README covers local setup, env vars, and deployment steps.
 
-- **User Authentication**: Secure sign-in with Google, with automatic profile creation.
-- **Dual-Mode Study Timer**: Supports both **Pomodoro** (countdown) and **Stopwatch** (count-up) modes.
-- **Subject Management**: Create, color-code, and archive study subjects.
-- **Session Tracking**: Automatically saves all study sessions to a persistent database.
-- **Data Visualization**: A dashboard with charts and stats to visualize your study habits.
-- **Session History**: A detailed, filterable log of all past study sessions.
-- **Customizable UI**:
-    - Light and Dark modes.
-    - Multiple timer themes (Default, Forest, Ocean, Sunset, Matrix).
-    - Responsive layout with a toggle for side-by-side or stacked views on desktop.
+Core Features
+- Secure Google Authentication (Firebase Auth) with automatic profile creation
+- Dual-mode timer: Pomodoro (countdown) and Stopwatch (count-up)
+- Subject management: create, color-code, archive
+- Automatic session tracking (persisted to Firestore)
+- Dashboard with charts and session history
+- Light/Dark themes and multiple timer themes
+- Responsive layout with desktop view toggles
 
----
+Tech Stack
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS & shadcn/ui
+- Firebase Firestore & Auth
+- Vercel / Netlify deployment
 
-### Tech Stack
+Getting Started (Local)
 
-- **Framework**: [Next.js](https://nextjs.org/) (App Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
-- **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore)
-- **Authentication**: [Firebase Authentication](https://firebase.google.com/docs/auth)
-- **Deployment**: [Vercel](https://vercel.com/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-
----
-
-## Getting Started
-
-To run this project locally, follow these steps:
-
-### 1. Clone the Repository
+1. Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/fenrirstudy.git
 cd fenrirstudy
 ```
 
-### 2. Install Dependencies
+2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Set Up Environment Variables
+3. Set Up Environment Variables
 
 Create a `.env.local` file in your project root and add your Firebase project credentials. You can get these from your Firebase project settings.
 
@@ -66,7 +67,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="your-measurement-id"
 ```
 
-### 4. Run the Development Server
+4. Run the Development Server
 
 ```bash
 npm run dev

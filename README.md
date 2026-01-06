@@ -1,4 +1,6 @@
-# fenrirstudy 🐺
+# fenrirstudy 
+# Update 5.6
+<h3> with server side timer rendering </h3>
 
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
 [![Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
@@ -10,17 +12,9 @@
 
 Modern, full-stack study tracker to time sessions, manage subjects, and visualize study habits.
 
-Screenshots
-- Add screenshots to /public or repo and replace the URL below:
-![fenrirstudy Screenshot](https://user-images.githubusercontent.com/12345/your-screenshot-url.png)
-
 Live Demos
 - Vercel: https://fenrirstudy.vercel.app/
 - Netlify: https://fenrirstudy.netlify.app/
-
-Quick Links
-- Repo: (your repository)
-- Docs: This README covers local setup, env vars, and deployment steps.
 
 Core Features
 - Secure Google Authentication (Firebase Auth) with automatic profile creation
@@ -43,8 +37,8 @@ Getting Started (Local)
 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/fenrirstudy.git
-cd fenrirstudy
+git clone https://github.com/ankitxrishav/FenrirStudy.git
+cd FenrirStudy
 ```
 
 2. Install Dependencies
@@ -91,4 +85,5 @@ To deploy this application on Vercel:
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-<!-- forced change -->
+
+

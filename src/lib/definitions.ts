@@ -31,12 +31,21 @@ export type Goal = {
   subjectId?: string;
 };
 
+export type UserSettings = {
+  pomodoroDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
+  sessionEndAlert: boolean;
+  breakReminder: boolean;
+};
+
 export type User = {
   uid: string;
   displayName: string;
   email: string;
   photoURL: string;
   createdAt: string;
+  settings?: UserSettings;
 };
 
 // Represents the state of a user's timer, stored in Firestore

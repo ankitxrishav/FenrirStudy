@@ -71,17 +71,6 @@ Open [http://localhost:9002](http://localhost:9002) with your browser to see the
 
 ---
 
-## Deploying on Vercel
-
-To deploy this application on Vercel:
-
-1.  Push your code to a Git repository (like GitHub).
-2.  Connect your repository to Vercel.
-3.  During the setup process on Vercel, add the same environment variables from your `.env.local` file into the project settings.
-4.  Deploy! Vercel will automatically build and deploy your Next.js application.
-
----
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

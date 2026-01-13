@@ -19,62 +19,67 @@ export function useUser() {
       setLoading(true);
       return;
     }
-    
+
     if (!auth || !firestore) {
       setLoading(false);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    console.log("[Auth] Attaching onAuthStateChanged listener...");
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      console.log("[Auth] State changed: ", authUser ? "User Logged In" : "No User");
       if (authUser) {
-        const userRef = doc(firestore, `users/${authUser.uid}`);
-        
-        try {
-          const userSnap = await getDoc(userRef);
+        setUser(authUser);
+        setLoading(false);
+        console.log("[Auth] Setting user and fetching profile...");
 
+        // Perform background sync/init
+        const userRef = doc(firestore, `users/${authUser.uid}`);
+        getDoc(userRef).then((userSnap) => {
           if (!userSnap.exists()) {
-            const userData: Omit<AppUser, 'createdAt'> & { createdAt: any; lastLogin: any } = {
+            const userData: Omit<AppUser, 'createdAt' | 'lastLogin'> & {
+              createdAt: any;
+              lastLogin: any;
+            } = {
               uid: authUser.uid,
               displayName: authUser.displayName || 'Anonymous',
               email: authUser.email || '',
               photoURL: authUser.photoURL || '',
+              streak: 0,
               createdAt: serverTimestamp(),
               lastLogin: serverTimestamp(),
             };
-            
-            setDoc(userRef, userData).catch((serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: userRef.path,
-                    operation: 'create',
-                    requestResourceData: userData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
 
+            setDoc(userRef, userData).catch((serverError) => {
+              const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'create',
+                requestResourceData: userData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+            });
           } else {
             const updateData = { lastLogin: serverTimestamp() };
             setDoc(userRef, updateData, { merge: true }).catch((serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: userRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
+              const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
             });
           }
-        } catch (e) {
-            const permissionError = new FirestorePermissionError({
-                path: userRef.path,
-                operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        }
-
-        setUser(authUser);
+        }).catch((e) => {
+          const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'get',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

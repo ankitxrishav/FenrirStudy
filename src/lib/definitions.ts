@@ -24,11 +24,24 @@ export type Session = {
 };
 
 export type Goal = {
-  id:string;
+  id: string;
   userId: string;
   type: 'daily' | 'weekly-subject';
   targetMinutes: number;
   subjectId?: string;
+};
+
+export type Habit = {
+  id: string;
+  name: string;
+  completed: boolean;
+};
+
+export type DailyActivity = {
+  date: string; // ISO date (YYYY-MM-DD)
+  habits: Habit[];
+  studyTimeSeconds: number;
+  studyTargetMet: boolean;
 };
 
 export type UserSettings = {
@@ -37,6 +50,7 @@ export type UserSettings = {
   longBreakDuration: number;
   sessionEndAlert: boolean;
   breakReminder: boolean;
+  studyTargetHours: number; // New: Daily study goal (1-12)
 };
 
 export type User = {
@@ -46,6 +60,9 @@ export type User = {
   photoURL: string;
   createdAt: string;
   settings?: UserSettings;
+  streak: number; // Current study target streak
+  lastStreakUpdate?: string; // Last date the streak was maintained
+  lastLogin?: string;
 };
 
 // Represents the state of a user's timer, stored in Firestore
@@ -55,13 +72,12 @@ export type TimerState = {
   mode: 'pomodoro' | 'stopwatch';
   subjectId: string;
   // The server timestamp when the timer was last started/resumed
-  startedAt: { seconds: number, nanoseconds: number } | null;
+  startedAt: any;
   // The server timestamp of the absolute beginning of the session
-  sessionStartTime: { seconds: number, nanoseconds: number };
+  sessionStartTime: any;
   // Duration in seconds for pomodoro mode
   initialDuration: number;
   // Total time in milliseconds the timer has run before the current 'running' phase
-  accumulatedTime: number; 
+  accumulatedTime: number;
 }
 
-    

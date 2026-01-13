@@ -9,8 +9,12 @@ import { Activity, Target, TrendingUp, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { collection, query, where } from "firebase/firestore";
-import { Session } from "@/lib/definitions";
+import { Session, User } from "@/lib/definitions";
+import { useDoc } from "@/firebase";
+import { doc } from "firebase/firestore";
+import Link from "next/link";
 import { subDays, startOfDay } from "date-fns";
+import LoadingScreen from "@/components/app/loading-screen";
 
 function formatDuration(seconds: number) {
     if (seconds < 60) return "0m";
@@ -22,8 +26,11 @@ function formatDuration(seconds: number) {
 
 export default function DashboardPage() {
     const { user, loading: userLoading } = useUser();
-    const router = useRouter();
     const firestore = useFirestore();
+    const router = useRouter();
+
+    const userDocRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userData } = useDoc<User>(userDocRef);
 
     useEffect(() => {
         if (!userLoading && !user) {
@@ -43,7 +50,7 @@ export default function DashboardPage() {
 
     const { todayStats, sevenDaySessions } = useMemo(() => {
         if (!allSessions) return { todayStats: { timeStudied: 0, focusScore: 0 }, sevenDaySessions: [] };
-        
+
         const todayStart = startOfDay(new Date());
         const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
 
@@ -51,131 +58,122 @@ export default function DashboardPage() {
         const recentSessions = allSessions.filter(s => new Date(s.startTime) >= sevenDaysAgo);
 
         const timeStudied = todaySessions.reduce((acc, s) => acc + s.duration, 0);
-        
+
         const validFocusSessions = todaySessions.filter(s => s.focusScore > 0);
         const focusScore = validFocusSessions.length > 0
             ? Math.round(validFocusSessions.reduce((acc, s) => acc + s.focusScore, 0) / validFocusSessions.length)
             : 0;
-            
-        return { 
+
+        return {
             todayStats: { timeStudied, focusScore },
             sevenDaySessions: recentSessions
         };
     }, [allSessions]);
-    
-    const consistencyStreak = useMemo(() => {
-        if (!allSessions || allSessions.length === 0) return 0;
-        
-        const sessionDates = [...new Set(allSessions.map(s => startOfDay(new Date(s.startTime)).getTime()))].sort((a,b) => b - a);
-        
-        if (sessionDates.length === 0) return 0;
 
-        let streak = 0;
-        const today = startOfDay(new Date());
-        const yesterday = startOfDay(subDays(new Date(), 1));
-        
-        // A streak can start today or yesterday
-        if(sessionDates[0] === today.getTime() || sessionDates[0] === yesterday.getTime()){
-            streak = 1;
-            let lastDate = new Date(sessionDates[0]);
-            for(let i=1; i < sessionDates.length; i++){
-                const currentDate = new Date(sessionDates[i]);
-                const expectedPreviousDay = startOfDay(subDays(lastDate, 1));
-                if(currentDate.getTime() === expectedPreviousDay.getTime()){
-                    streak++;
-                    lastDate = currentDate;
-                } else if(currentDate.getTime() < expectedPreviousDay.getTime()) {
-                    // Gap in dates, so streak is broken
-                    break;
-                }
-                // If currentDate is the same as lastDate, we just continue
-            }
-        }
-        return streak;
-    }, [allSessions]);
+    const consistencyStreak = userData?.streak || 0;
 
 
-    if (userLoading || sessionsLoading || !user) {
-        return (
-            <div className="flex-1 space-y-4 p-8 pt-6">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <div className="text-muted-foreground">Loading dashboard data...</div>
-            </div>
-        );
-    }
-    
     return (
         <div className="flex-col md:flex">
             <div className="flex-1 space-y-4 p-8 pt-6">
-                <h1 className="text-3xl font-bold tracking-tight">Welcome, {user.displayName?.split(' ')[0]}!</h1>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Time Studied (Today)</CardTitle>
-                            <Activity className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatDuration(todayStats.timeStudied)}</div>
-                            <p className="text-xs text-muted-foreground">
-                                Total time logged today.
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Focus Score (Avg Today)</CardTitle>
-                            <Zap className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{todayStats.focusScore > 0 ? `${todayStats.focusScore}%` : '-'}</div>
-                             <p className="text-xs text-muted-foreground">
-                                Based on completed sessions.
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Daily Goal</CardTitle>
-                            <Target className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">0%</div>
-                            <p className="text-xs text-muted-foreground">
-                                Set a goal to get started
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Consistency Streak</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{consistencyStreak} {consistencyStreak === 1 ? 'Day' : 'Days'}</div>
-                            <p className="text-xs text-muted-foreground">
-                                Keep studying every day!
-                            </p>
-                        </CardContent>
-                    </Card>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        {user ? `Welcome, ${user.displayName?.split(' ')[0]}!` : 'Dashboard'}
+                    </h1>
                 </div>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
-                    <Card className="col-span-1 lg:col-span-4">
-                        <CardHeader>
-                            <CardTitle>Weekly Overview</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pl-2">
-                            <Overview sessions={sevenDaySessions} />
-                        </CardContent>
-                    </Card>
-                    <Card className="col-span-1 lg:col-span-3">
-                        <CardHeader>
-                            <CardTitle>Recent Sessions</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <RecentSessions />
-                        </CardContent>
-                    </Card>
-                </div>
+
+                {(userLoading || sessionsLoading || !user) ? (
+                    (() => {
+                        console.log("[UI] Dashboard Loading:", { userLoading, sessionsLoading, user: !!user });
+                        return <LoadingScreen />;
+                    })()
+                ) : (
+                    <>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Time Studied (Today)</CardTitle>
+                                    <Activity className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{formatDuration(todayStats.timeStudied)}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Total time logged today.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Focus Score (Avg Today)</CardTitle>
+                                    <Zap className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{todayStats.focusScore > 0 ? `${todayStats.focusScore}%` : '-'}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Based on completed sessions.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Daily Goal</CardTitle>
+                                    <Target className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    {userData?.settings?.studyTargetHours ? (
+                                        <>
+                                            <div className="text-2xl font-bold">
+                                                {Math.min(100, Math.round((todayStats.timeStudied / (userData.settings.studyTargetHours * 3600)) * 100))}%
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Goal: {userData.settings.studyTargetHours}h
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="text-2xl font-bold">0%</div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Set a goal in <Link href="/goals" className="underline">Goals</Link>
+                                            </p>
+                                        </>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Consistency Streak</CardTitle>
+                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{consistencyStreak} {consistencyStreak === 1 ? 'Day' : 'Days'}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {userData?.settings?.studyTargetHours
+                                            ? `Reach your ${userData.settings.studyTargetHours}h goal to maintain!`
+                                            : "Reach your 2h daily goal to maintain!"}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
+                            <Card className="col-span-1 lg:col-span-4">
+                                <CardHeader>
+                                    <CardTitle>Weekly Overview</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pl-2">
+                                    <Overview sessions={sevenDaySessions} />
+                                </CardContent>
+                            </Card>
+                            <Card className="col-span-1 lg:col-span-3">
+                                <CardHeader>
+                                    <CardTitle>Recent Sessions</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <RecentSessions />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

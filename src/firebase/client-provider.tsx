@@ -7,6 +7,7 @@ import { Auth } from 'firebase/auth';
 import { Firestore } from 'firebase/firestore';
 import { initializeFirebase } from './config';
 import { FirebaseProvider } from './provider';
+import LoadingScreen from '@/components/app/loading-screen';
 
 // This provider is responsible for initializing Firebase on the client-side
 // and ensuring it's only done once.
@@ -31,7 +32,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
     return (
         <FirebaseProvider app={app} auth={auth} firestore={firestore} loading={loading}>
-            {!loading ? children : null /* Or a global loader */}
+            {children}
         </FirebaseProvider>
     );
 }

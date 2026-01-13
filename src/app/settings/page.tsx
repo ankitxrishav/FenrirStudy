@@ -15,6 +15,7 @@ import { useEffect, useState, useMemo } from "react";
 import { doc, updateDoc, collection, query, where } from "firebase/firestore";
 import { User, UserSettings, Session } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
+import LoadingScreen from "@/components/app/loading-screen";
 
 export default function SettingsPage() {
     const { user, loading: userLoading } = useUser();
@@ -33,7 +34,8 @@ export default function SettingsPage() {
         shortBreakDuration: 5,
         longBreakDuration: 15,
         sessionEndAlert: true,
-        breakReminder: true
+        breakReminder: true,
+        studyTargetHours: 2,
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -50,11 +52,7 @@ export default function SettingsPage() {
     }, [userData]);
 
     if (userLoading || docLoading || !user) {
-        return (
-            <div className="flex h-[50vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
     const handleSaveChanges = async () => {
@@ -125,97 +123,101 @@ export default function SettingsPage() {
     return (
         <div className="container mx-auto p-4 md:p-8">
             <h1 className="mb-6 text-3xl font-bold tracking-tight">Settings</h1>
-            <div className="grid gap-8 md:grid-cols-3">
-                <div className="md:col-span-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Timer Settings</CardTitle>
-                            <CardDescription>Customize your Pomodoro and break durations.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                <div className="space-y-2">
-                                    <Label htmlFor="pomodoro">Pomodoro (minutes)</Label>
-                                    <Input
-                                        id="pomodoro"
-                                        type="number"
-                                        value={settings.pomodoroDuration}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, pomodoroDuration: parseInt(e.target.value) || 0 })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="short-break">Short Break (minutes)</Label>
-                                    <Input
-                                        id="short-break"
-                                        type="number"
-                                        value={settings.shortBreakDuration}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, shortBreakDuration: parseInt(e.target.value) || 0 })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="long-break">Long Break (minutes)</Label>
-                                    <Input
-                                        id="long-break"
-                                        type="number"
-                                        value={settings.longBreakDuration}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, longBreakDuration: parseInt(e.target.value) || 0 })}
-                                    />
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="space-y-4">
-                                <h3 className="font-medium">Notifications</h3>
-                                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <Label>End of Session Alert</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Receive a notification when a timer session ends.
-                                        </p>
+            {(userLoading || docLoading || !user) ? (
+                <LoadingScreen />
+            ) : (
+                <div className="grid gap-8 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Timer Settings</CardTitle>
+                                <CardDescription>Customize your Pomodoro and break durations.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="pomodoro">Pomodoro (minutes)</Label>
+                                        <Input
+                                            id="pomodoro"
+                                            type="number"
+                                            value={settings.pomodoroDuration}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, pomodoroDuration: parseInt(e.target.value) || 0 })}
+                                        />
                                     </div>
-                                    <Switch
-                                        checked={settings.sessionEndAlert}
-                                        onCheckedChange={(checked: boolean) => setSettings({ ...settings, sessionEndAlert: checked })}
-                                    />
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <Label>Break Reminder</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Get a reminder when your break is over.
-                                        </p>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="short-break">Short Break (minutes)</Label>
+                                        <Input
+                                            id="short-break"
+                                            type="number"
+                                            value={settings.shortBreakDuration}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, shortBreakDuration: parseInt(e.target.value) || 0 })}
+                                        />
                                     </div>
-                                    <Switch
-                                        checked={settings.breakReminder}
-                                        onCheckedChange={(checked: boolean) => setSettings({ ...settings, breakReminder: checked })}
-                                    />
+                                    <div className="space-y-2">
+                                        <Label htmlFor="long-break">Long Break (minutes)</Label>
+                                        <Input
+                                            id="long-break"
+                                            type="number"
+                                            value={settings.longBreakDuration}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({ ...settings, longBreakDuration: parseInt(e.target.value) || 0 })}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="border-t px-6 py-4">
-                            <Button onClick={handleSaveChanges} disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Changes
-                            </Button>
-                        </CardFooter>
-                    </Card>
+                                <Separator />
+                                <div className="space-y-4">
+                                    <h3 className="font-medium">Notifications</h3>
+                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <Label>End of Session Alert</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Receive a notification when a timer session ends.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={settings.sessionEndAlert}
+                                            onCheckedChange={(checked: boolean) => setSettings({ ...settings, sessionEndAlert: checked })}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <Label>Break Reminder</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Get a reminder when your break is over.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={settings.breakReminder}
+                                            onCheckedChange={(checked: boolean) => setSettings({ ...settings, breakReminder: checked })}
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t px-6 py-4">
+                                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save Changes
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </div>
+                    <div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Data Export</CardTitle>
+                                <CardDescription>Download your study session history.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Button variant="outline" className="w-full" onClick={() => exportData('csv')}>
+                                    <Download className="mr-2 h-4 w-4" /> Export as CSV
+                                </Button>
+                                <Button variant="outline" className="w-full" onClick={() => exportData('json')}>
+                                    <Download className="mr-2 h-4 w-4" /> Export as JSON
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
-                <div>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Data Export</CardTitle>
-                            <CardDescription>Download your study session history.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Button variant="outline" className="w-full" onClick={() => exportData('csv')}>
-                                <Download className="mr-2 h-4 w-4" /> Export as CSV
-                            </Button>
-                            <Button variant="outline" className="w-full" onClick={() => exportData('json')}>
-                                <Download className="mr-2 h-4 w-4" /> Export as JSON
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+            )}
         </div>
     );
 }

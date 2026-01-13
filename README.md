@@ -1,4 +1,15 @@
 # fenrirstudy 
+# Update 5.7
+<h3> Enhanced UI, Subject Management & Stability </h3>
+
+- **NEW GOAL PAGE ADDED**: That will allow users to set daily study goals and track their progress.
+- **Subject Management**: Enhanced the subjects management dashboard with features to edit and archive subjects.
+- **Infrastructure**: Fixed TypeScript type mismatches and improved user profile initialization.
+- **Reliability**: Resolved Firestore permission errors by handling non-existent documents in security rules.
+- **Brand Identity**: Integrated official logo (`public/icon/logo.svg`) into the app header.
+- **UX Upgrade**: Redesigned navigation bar with text labels, responsive layout for all devices, and fluid Framer Motion animations.
+- **Functionality**: Fully implemented Subject Edit feature in the subjects management dashboard.
+
 # Update 5.6
 <h3> with server side timer rendering </h3>
 

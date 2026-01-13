@@ -3,8 +3,9 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, serverTimestamp, updateDoc, setDoc, addDoc, collection, Timestamp } from 'firebase/firestore';
-import { TimerState, Session } from '@/lib/definitions';
+import { startOfDay, format, subDays } from 'date-fns';
+import { doc, serverTimestamp, updateDoc, setDoc, addDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { TimerState, Session, User } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -247,6 +248,46 @@ export function useTimer() {
           title: "Session Saved!",
           description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.`,
         });
+
+        // Check and update streak
+        const targetHours = userData?.settings?.studyTargetHours || 2;
+        const targetSeconds = targetHours * 3600;
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        // Get today's total sessions
+        const sessionsRef = collection(firestore, 'sessions');
+        const todayStart = startOfDay(new Date());
+        const q = query(sessionsRef, where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+
+        let totalSecondsToday = 0;
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (new Date(data.startTime) >= todayStart) {
+            totalSecondsToday += data.duration;
+          }
+        });
+
+        if (totalSecondsToday >= targetSeconds) {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          const lastUpdate = userData.lastStreakUpdate;
+          const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
+          if (lastUpdate !== today) {
+            let newStreak = 1;
+            if (lastUpdate === yesterday) {
+              newStreak = (userData.streak || 0) + 1;
+            }
+            await updateDoc(userDocRef, {
+              streak: newStreak,
+              lastStreakUpdate: today
+            });
+            toast({
+              title: "Streak Updated!",
+              description: `You've maintained a ${newStreak} day streak! 🔥`,
+            });
+          }
+        }
       }
     }
 
@@ -271,7 +312,7 @@ export function useTimer() {
       });
       errorEmitter.emit('permission-error', permissionError);
     });
-  }
+  };
 
   const handleModeChange = (newMode: 'pomodoro' | 'stopwatch') => {
     if (isIdle) {
@@ -280,7 +321,7 @@ export function useTimer() {
         updateDoc(timerStateRef.current, { mode: newMode });
       }
     }
-  }
+  };
 
   const handleSubjectChange = (subjectId: string) => {
     if (isIdle) {
@@ -301,8 +342,6 @@ export function useTimer() {
       }
     }
   };
-
-
 
   return {
     displayTime,

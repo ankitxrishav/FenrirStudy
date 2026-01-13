@@ -10,7 +10,7 @@
 > **View the full documentation here: [documentation.md](documentation.md)**
 
 # Update 5.7
-<h3> Enhanced UI, Subject Management & Stability </h3>
+<h3> Enhanced UI, Subject Management & goal page added </h3>
 
 - **NEW GOAL PAGE ADDED**: That will allow users to set daily study goals and track their progress.
 - **Subject Management**: Enhanced the subjects management dashboard with features to edit and archive subjects.

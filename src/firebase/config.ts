@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Provided by the user. This connects the app to your Firebase project.
+// Configuration is now read from environment variables for security.
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -20,20 +20,16 @@ let auth: Auth;
 let firestore: Firestore;
 
 function initializeFirebase() {
-    console.log("[Firebase] initializeFirebase called");
     if (typeof window !== 'undefined') {
         if (!getApps().length) {
-            console.log("[Firebase] Initializing new app instance");
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 firestore = getFirestore(app);
-                console.log("[Firebase] Initialization successful");
             } catch (e) {
-                console.error("[Firebase] Initialization error", e);
+                console.error("Firebase initialization error", e);
             }
         } else {
-            console.log("[Firebase] Using existing app instance");
             app = getApp();
             auth = getAuth(app);
             firestore = getFirestore(app);

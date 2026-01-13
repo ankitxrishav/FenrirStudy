@@ -31,18 +31,6 @@ export type Goal = {
   subjectId?: string;
 };
 
-export type Habit = {
-  id: string;
-  name: string;
-  completed: boolean;
-};
-
-export type DailyActivity = {
-  date: string; // ISO date (YYYY-MM-DD)
-  habits: Habit[];
-  studyTimeSeconds: number;
-  studyTargetMet: boolean;
-};
 
 export type UserSettings = {
   pomodoroDuration: number;

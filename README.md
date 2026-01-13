@@ -1,4 +1,6 @@
 # fenrirstudy 
+> **View the full documentation here: [documentation.md](documentation.md)**
+
 # Update 5.7
 <h3> Enhanced UI, Subject Management & Stability </h3>
 
@@ -10,8 +12,6 @@
 - **UX Upgrade**: Redesigned navigation bar with text labels, responsive layout for all devices, and fluid Framer Motion animations.
 - **Functionality**: Fully implemented Subject Edit feature in the subjects management dashboard.
 
-# Update 5.6
-<h3> with server side timer rendering </h3>
 
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
 [![Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)

@@ -10,11 +10,13 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, updateDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
-import { User, DailyActivity, Session, Habit } from '@/lib/definitions';
+import { User, Session } from '@/lib/definitions';
 import { startOfDay, format, subDays } from 'date-fns';
 import { Flame, Target, CheckCircle2, Plus, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import LoadingScreen from "@/components/app/loading-screen";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function GoalsPage() {
     const { user, loading: userLoading } = useUser();
@@ -26,10 +28,6 @@ export default function GoalsPage() {
     // Fetch User Doc for settings and streak
     const userDocRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userData, loading: docLoading } = useDoc<User>(userDocRef);
-
-    // Fetch Daily Activity for Today
-    const activityDocRef = useMemo(() => (user && firestore ? doc(firestore, 'dailyActivities', `${user.uid}_${today}`) : null), [user, firestore, today]);
-    const { data: activityData, loading: activityLoading } = useDoc<DailyActivity>(activityDocRef);
 
     // Fetch Today's Sessions to calculate study time
     const sessionsQuery = useMemo(() => {
@@ -50,7 +48,6 @@ export default function GoalsPage() {
     }, [allSessions]);
 
     const [studyTarget, setStudyTarget] = useState(1);
-    const [newHabitName, setNewHabitName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -74,56 +71,13 @@ export default function GoalsPage() {
         }
     };
 
-    const handleAddHabit = async () => {
-        if (!activityDocRef || !newHabitName.trim()) return;
-        const newHabit: Habit = {
-            id: crypto.randomUUID(),
-            name: newHabitName.trim(),
-            completed: false
-        };
-        const currentHabits = activityData?.habits || [];
-        try {
-            await setDoc(activityDocRef, {
-                date: today,
-                habits: [...currentHabits, newHabit],
-                studyTimeSeconds: todayStudySeconds,
-                studyTargetMet: todayStudySeconds >= (studyTarget * 3600)
-            }, { merge: true });
-            setNewHabitName('');
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to add habit.", variant: "destructive" });
-        }
-    };
-
-    const toggleHabit = async (habitId: string) => {
-        if (!activityDocRef || !activityData) return;
-        const updatedHabits = activityData.habits.map(h =>
-            h.id === habitId ? { ...h, completed: !h.completed } : h
-        );
-        try {
-            await updateDoc(activityDocRef, { habits: updatedHabits });
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to update habit.", variant: "destructive" });
-        }
-    };
-
-    const deleteHabit = async (habitId: string) => {
-        if (!activityDocRef || !activityData) return;
-        const updatedHabits = activityData.habits.filter(h => h.id !== habitId);
-        try {
-            await updateDoc(activityDocRef, { habits: updatedHabits });
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to delete habit.", variant: "destructive" });
-        }
-    };
-
     const studyProgress = Math.min(100, (todayStudySeconds / (studyTarget * 3600)) * 100);
 
     return (
         <div className="container max-w-4xl py-10 space-y-8">
             <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Goals & Habits</h1>
-                <p className="text-muted-foreground">Set your daily targets and track your progress.</p>
+                <h1 className="text-3xl font-bold tracking-tight">Daily Goals</h1>
+                <p className="text-muted-foreground">Set your daily study target and track your streak.</p>
             </div>
 
             {(userLoading || docLoading || !user) ? (
@@ -190,54 +144,6 @@ export default function GoalsPage() {
                             </CardContent>
                         </Card>
                     </div>
-
-                    {/* Habits Section */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                Daily Habits
-                            </CardTitle>
-                            <CardDescription>Add personal habits and tick them off when done. (Doesn't affect study streak)</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="e.g. 15 min exercise"
-                                    value={newHabitName}
-                                    onChange={(e) => setNewHabitName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddHabit()}
-                                />
-                                <Button onClick={handleAddHabit} size="icon">
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-
-                            <div className="space-y-2 pt-2">
-                                {(activityData?.habits || []).map((habit) => (
-                                    <div key={habit.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <Checkbox
-                                                checked={habit.completed}
-                                                onCheckedChange={() => toggleHabit(habit.id)}
-                                            />
-                                            <span className={habit.completed ? 'line-through text-muted-foreground' : ''}>
-                                                {habit.name}
-                                            </span>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={() => deleteHabit(habit.id)}>
-                                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                                {(!activityData?.habits || activityData.habits.length === 0) && (
-                                    <div className="text-center py-6 text-muted-foreground text-sm">
-                                        No habits added for today.
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
                 </>
             )}
         </div>

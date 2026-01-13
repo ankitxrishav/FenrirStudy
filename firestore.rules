@@ -1,50 +1,60 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is signed in
+    /* =========================
+       COMMON HELPERS
+       ========================= */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if the request is coming from the owner of the document
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
-    
+
+    /* =========================
+       USERS
+       ========================= */
     match /users/{userId} {
-      // A user can read, update, or delete their own profile document.
-      allow read, update, delete: if isSignedIn() && isOwner(userId);
-      // A user can create their own profile document if the UID in the document
-      // matches their authentication UID. This is crucial for first-time login.
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow create, get, update, delete: if isOwner(userId);
+      allow list: if false;
     }
 
+    /* =========================
+       SUBJECTS
+       ========================= */
     match /subjects/{subjectId} {
-      // A user can read, create, update, or delete a subject if they are signed in
-      // and the document's userId matches their own auth uid.
-      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow get, update, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow list: if isSignedIn();
     }
 
+    /* =========================
+       SESSIONS
+       ========================= */
     match /sessions/{sessionId} {
-      // A user can read or create a session if they are signed in and the
-      // document's userId matches their own auth uid.
-      allow read, create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      
-      // Sessions are immutable to maintain data integrity for analytics.
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow get: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow list: if isSignedIn();
+
       allow update, delete: if false;
     }
 
+    /* =========================
+       TIMER STATES
+       ========================= */
     match /timerStates/{userId} {
-      // A user can read their own timer state.
-      allow read: if isSignedIn() && isOwner(userId);
-      // A user can create their own timer state document.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == request.auth.uid;
-      // A user can update their own timer state document, but cannot change the userId.
-      allow update: if isSignedIn() && isOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow read, write: if isOwner(userId);
     }
+
   }
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { useTimer } from '@/hooks/use-timer';
+import { useTimer, type TimerFaceId } from '@/hooks/use-timer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ import { TimerControls } from './timer-controls';
 import { Card, CardContent } from '@/components/ui/card';
 import { StyleSelector } from './style-selector';
 
-export type TimerFaceId = 'digital' | 'ring' | 'analog' | 'radial' | 'retro';
 
 const modeSettings: { [key in 'pomodoro' | 'stopwatch']: { label: string } } = {
   pomodoro: { label: 'Pomodoro' },

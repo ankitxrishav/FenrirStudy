@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import BottomNav from '@/components/app/bottom-nav';
 import { AppHeader } from '@/components/app/header';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { TimerProvider } from '@/hooks/use-timer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -15,13 +16,19 @@ export const metadata: Metadata = {
   title: 'fenrirstudy',
   description: 'A personal study analytics system to enhance focus and productivity.',
   manifest: '/manifest.json',
-  themeColor: '#09090b',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Fenrir',
   },
+};
+
+export const viewport = {
+  themeColor: '#09090b',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -44,16 +51,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <FirebaseClientProvider>
-            <div className="relative flex h-full w-full flex-col">
-              <AppHeader />
-              <main className="flex-1 overflow-y-auto pt-16 pb-24">
-                {children}
-              </main>
-              <footer className="fixed bottom-0 inset-x-0 z-50 h-20 flex items-center justify-center">
-                <BottomNav />
-              </footer>
-            </div>
-            <Toaster />
+            <TimerProvider>
+              <div className="relative flex h-full w-full flex-col">
+                <AppHeader />
+                <main className="flex-1 overflow-y-auto pt-16 pb-24">
+                  {children}
+                </main>
+                <footer className="fixed bottom-0 inset-x-0 z-50 h-20 flex items-center justify-center">
+                  <BottomNav />
+                </footer>
+              </div>
+              <Toaster />
+            </TimerProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>

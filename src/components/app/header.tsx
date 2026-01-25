@@ -17,7 +17,6 @@ import Image from 'next/image';
 import { useTimer } from '@/hooks/use-timer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StyleSelector } from './timer/style-selector';
-import { InstallPWA } from './install-pwa';
 
 export function AppHeader() {
   const { user, loading } = useUser();
@@ -63,9 +62,6 @@ export function AppHeader() {
         <div className="flex flex-1 items-center justify-end space-x-3">
           {user && (
             <div className="flex items-center gap-2">
-              {/* PWA Install Trigger */}
-              <InstallPWA />
-
               {/* Ritual Controls Group */}
               <div className="flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10 shadow-sm transition-all hover:bg-white/10 group relative">
                 <ThemeToggle />

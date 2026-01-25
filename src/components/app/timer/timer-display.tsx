@@ -1,5 +1,5 @@
 
-import { TimerFaceId } from "./timer";
+import { type TimerFaceId } from "@/hooks/use-timer";
 import { DigitalFace } from "./faces/digital-face";
 import { RingFace } from "./faces/ring-face";
 import { AnalogFace } from "./faces/analog-face";

@@ -48,8 +48,8 @@ export function AnalogFace({ duration, initialDuration, mode, isActive, color }:
                 <div className="absolute w-3 h-3 bg-foreground rounded-full left-1/2 top-1/2 -ml-1.5 -mt-1.5 shadow-xl" />
             </div>
 
-            <div className="absolute top-[85%] flex flex-col items-center">
-                <span className="text-2xl font-black timer-digit opacity-40 bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-white/10 shadow-2xl tracking-widest">
+            <div className="absolute top-[25%] flex flex-col items-center">
+                <span className="text-xl font-black timer-digit opacity-20 bg-white/5 backdrop-blur-md px-3 py-1 rounded-xl border border-white/5 tracking-widest">
                     {Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')}
                 </span>
             </div>

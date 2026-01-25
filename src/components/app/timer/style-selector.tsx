@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button";
 import { Check, Clock, Donut, CircleDot, Monitor, Smartphone, Layers, Palette, Wand2 } from "lucide-react";
-import { TimerFaceId } from "./timer";
+import { type TimerFaceId } from "@/hooks/use-timer";
 import { cn } from "@/lib/utils";
 
 interface StyleSelectorProps {

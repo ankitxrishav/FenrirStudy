@@ -279,20 +279,36 @@ export default function DashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-8">
-                        <div className="h-[250px] w-full">
-                            {/* Simplified custom heatmap visual */}
-                            <div className="flex items-end justify-between h-full gap-1">
-                                {stats.behavior.hourHeatmap.map((h, i) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group/hour">
-                                        <div
-                                            className="w-full rounded-t-lg transition-all duration-500 hover:bg-primary shadow-[0_0_20px_rgba(var(--primary),0.2)]"
-                                            style={{
-                                                height: `${Math.max(4, (h.total / stats.behavior.bestHour.total) * 100)}%`,
-                                                backgroundColor: h.total > 0 ? `hsla(var(--primary), ${Math.max(0.1, h.total / stats.behavior.bestHour.total)})` : 'transparent',
-                                                border: h.total > 0 ? '1px solid hsla(var(--primary), 0.2)' : '1px dashed hsla(var(--muted), 0.1)'
-                                            }}
-                                        />
-                                        {i % 4 === 0 && <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">{h.label}</span>}
+                        <div className="flex flex-col gap-4 h-[250px] w-full">
+                            {/* Bar Layer */}
+                            <div className="flex-1 flex items-end justify-between gap-1 h-full">
+                                {stats.behavior.hourHeatmap.map((h, i) => {
+                                    const maxTotal = stats.behavior.bestHour.total || 1;
+                                    const percentageHeight = (h.total / maxTotal) * 100;
+                                    const hasData = h.total > 0;
+
+                                    return (
+                                        <div key={i} className="flex-1 h-full flex flex-col justify-end group/bar">
+                                            <div
+                                                className="w-full rounded-t-lg transition-all duration-500 hover:bg-primary shadow-[0_0_20px_rgba(var(--primary),0.2)]"
+                                                style={{
+                                                    height: `${Math.max(hasData ? 8 : 4, percentageHeight)}%`,
+                                                    backgroundColor: hasData ? `hsl(var(--primary) / ${Math.max(0.2, h.total / maxTotal)})` : 'transparent',
+                                                    border: hasData ? `1px solid hsl(var(--primary) / 0.3)` : '1px dashed hsl(var(--muted-foreground) / 0.1)'
+                                                }}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Label Layer (Aligned track) */}
+                            <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                                {[0, 4, 8, 12, 16, 20].map((hour) => (
+                                    <div key={hour} className="flex-1 text-center">
+                                        <span className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-widest">
+                                            {stats.behavior.hourHeatmap[hour].label}
+                                        </span>
                                     </div>
                                 ))}
                             </div>

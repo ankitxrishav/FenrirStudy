@@ -193,55 +193,88 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    const isProcessingStop = useRef(false);
+
     const stop = async (finalStatus: 'stopped' | 'completed') => {
         if (!firestore || !user || !timerStateRef.current || !timerState) return;
+        if (isProcessingStop.current) return;
+
+        isProcessingStop.current = true;
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        let finalElapsedTime = timerState.accumulatedTime;
-        if (timerState.status === 'running') {
-            const startedAtMillis = toMillis(timerState.startedAt);
-            if (startedAtMillis > 0) finalElapsedTime += (Date.now() - startedAtMillis) / 1000;
-        }
+        // Instantly transition UI state in Firestore to "stopped"
+        // This prevents double-triggers if the function is called again before completion
+        const resetState = {
+            status: 'stopped',
+            accumulatedTime: 0,
+            startedAt: null,
+            initialDuration: mode === 'pomodoro' ? customDuration * 60 : 0
+        };
 
-        const finalDurationSeconds = Math.round(finalElapsedTime);
-        if (finalDurationSeconds > 5 && toMillis(timerState.sessionStartTime) > 0) {
-            const sessionPayload = {
-                userId: user.uid,
-                subjectId: timerState.subjectId,
-                mode: timerState.mode,
-                startTime: new Date(toMillis(timerState.sessionStartTime)).toISOString(),
-                endTime: new Date().toISOString(),
-                duration: finalDurationSeconds,
-                pauseCount: 0,
-                status: finalStatus,
-                focusScore: 100,
-            };
-            addDoc(collection(firestore, 'sessions'), sessionPayload).catch(err => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `sessions/(new)`, operation: 'create', requestResourceData: sessionPayload }));
-            });
+        try {
+            await updateDoc(timerStateRef.current, resetState);
 
-            if (finalStatus === 'completed' || finalStatus === 'stopped') {
-                toast({ title: "Session Saved!", description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.` });
-                const targetHours = userData?.settings?.studyTargetHours || 2;
-                const sessionsRef = collection(firestore, 'sessions');
-                const todayStart = startOfDay(new Date());
-                const q = query(sessionsRef, where('userId', '==', user.uid));
-                const snap = await getDocs(q);
-                let totalSecondsToday = 0;
-                snap.forEach(d => { if (new Date(d.data().startTime) >= todayStart) totalSecondsToday += d.data().duration; });
+            let finalElapsedTime = timerState.accumulatedTime;
+            if (timerState.status === 'running') {
+                const startedAtMillis = toMillis(timerState.startedAt);
+                if (startedAtMillis > 0) finalElapsedTime += (Date.now() - startedAtMillis) / 1000;
+            }
 
-                if (totalSecondsToday >= targetHours * 3600) {
-                    const today = format(new Date(), 'yyyy-MM-dd');
-                    const lastUpdate = userData?.lastStreakUpdate;
-                    if (lastUpdate !== today) {
-                        let newStreak = lastUpdate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? (userData?.streak || 0) + 1 : 1;
-                        updateDoc(userRef!, { streak: newStreak, lastStreakUpdate: today });
-                        toast({ title: "Streak Updated!", description: `🔥 ${newStreak} day streak!` });
+            const finalDurationSeconds = Math.round(finalElapsedTime);
+
+            // Only save session if it's substantial (> 5s)
+            if (finalDurationSeconds > 5 && toMillis(timerState.sessionStartTime) > 0) {
+                const sessionPayload = {
+                    userId: user.uid,
+                    subjectId: timerState.subjectId,
+                    mode: timerState.mode,
+                    startTime: new Date(toMillis(timerState.sessionStartTime)).toISOString(),
+                    endTime: new Date().toISOString(),
+                    duration: finalDurationSeconds,
+                    pauseCount: 0,
+                    status: finalStatus,
+                    focusScore: 100,
+                };
+
+                await addDoc(collection(firestore, 'sessions'), sessionPayload);
+
+                if (finalStatus === 'completed' || finalStatus === 'stopped') {
+                    toast({ title: "Session Saved!", description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.` });
+
+                    // Streak Logic
+                    const targetHours = userData?.settings?.studyTargetHours || 2;
+                    const sessionsRef = collection(firestore, 'sessions');
+                    const todayStart = startOfDay(new Date());
+                    const q = query(sessionsRef, where('userId', '==', user.uid));
+                    const snap = await getDocs(q);
+
+                    let totalSecondsToday = 0;
+                    snap.forEach(d => {
+                        const data = d.data();
+                        if (new Date(data.startTime) >= todayStart) totalSecondsToday += data.duration;
+                    });
+
+                    if (totalSecondsToday >= targetHours * 3600) {
+                        const today = format(new Date(), 'yyyy-MM-dd');
+                        const lastUpdate = userData?.lastStreakUpdate;
+                        if (lastUpdate !== today && userRef) {
+                            let newStreak = lastUpdate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? (userData?.streak || 0) + 1 : 1;
+                            await updateDoc(userRef, { streak: newStreak, lastStreakUpdate: today });
+                            toast({ title: "Streak Updated!", description: `🔥 ${newStreak} day streak!` });
+                        }
                     }
                 }
             }
+        } catch (err: any) {
+            console.error("Stop ritual error:", err);
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: timerStateRef.current!.path,
+                operation: 'update',
+                requestResourceData: resetState
+            }));
+        } finally {
+            isProcessingStop.current = false;
         }
-        reset();
     };
 
     const reset = () => {

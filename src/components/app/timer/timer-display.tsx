@@ -1,27 +1,52 @@
 
+import { TimerFaceId } from "./timer";
+import { DigitalFace } from "./faces/digital-face";
+import { RingFace } from "./faces/ring-face";
+import { AnalogFace } from "./faces/analog-face";
+import { RadialFace } from "./faces/radial-face";
+import { RetroFace } from "./faces/retro-face";
+import { cn } from "@/lib/utils";
+
 interface TimerDisplayProps {
   time: number;
+  face: TimerFaceId;
+  mode: 'pomodoro' | 'stopwatch';
+  isActive: boolean;
+  initialDuration: number;
+  color?: string;
 }
 
-const formatTime = (totalSeconds: number) => {
-  const roundedSeconds = Math.floor(totalSeconds);
-  const seconds = roundedSeconds % 60;
-  const minutes = Math.floor(roundedSeconds / 60);
-  const hours = Math.floor(minutes / 60);
+export function TimerDisplay({
+  time,
+  face,
+  mode,
+  isActive,
+  initialDuration,
+  color
+}: TimerDisplayProps) {
 
-  if (hours > 0) {
-    return `${String(hours)}:${String(minutes % 60).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
-  
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-};
+  const renderFace = () => {
+    switch (face) {
+      case 'ring':
+        return <RingFace duration={time} initialDuration={initialDuration} mode={mode} isActive={isActive} color={color} />;
+      case 'analog':
+        return <AnalogFace duration={time} initialDuration={initialDuration} mode={mode} isActive={isActive} color={color} />;
+      case 'radial':
+        return <RadialFace duration={time} initialDuration={initialDuration} mode={mode} isActive={isActive} color={color} />;
+      case 'retro':
+        return <RetroFace duration={time} initialDuration={initialDuration} mode={mode} isActive={isActive} color={color} />;
+      case 'digital':
+      default:
+        return <DigitalFace duration={time} mode={mode} isActive={isActive} />;
+    }
+  };
 
-export function TimerDisplay({ time }: TimerDisplayProps) {
   return (
-    <div 
-        className="font-mono font-bold text-8xl md:text-9xl text-foreground tracking-tighter"
-    >
-        {formatTime(time)}
+    <div className={cn(
+      "relative w-full flex items-center justify-center transition-all duration-700 ease-out-expo",
+      isActive && "scale-105"
+    )}>
+      {renderFace()}
     </div>
   );
 }

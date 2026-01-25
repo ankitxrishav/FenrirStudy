@@ -39,6 +39,8 @@ export type UserSettings = {
   sessionEndAlert: boolean;
   breakReminder: boolean;
   studyTargetHours: number; // New: Daily study goal (1-12)
+  dashboardDensity?: 'compact' | 'relaxed';
+  minimalMode?: boolean;
 };
 
 export type User = {

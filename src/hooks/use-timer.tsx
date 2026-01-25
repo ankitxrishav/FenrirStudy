@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+export type TimerFaceId = 'digital' | 'ring' | 'analog' | 'radial' | 'retro';
+
 // Helper to convert Firestore Timestamp to milliseconds safely
 const toMillis = (timestamp: any): number => {
   if (timestamp instanceof Timestamp) {
@@ -46,6 +48,17 @@ export function useTimer() {
   const [customDuration, setCustomDuration] = useState(25);
   const [mode, setMode] = useState<'pomodoro' | 'stopwatch'>('pomodoro');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const [activeFace, setActiveFace] = useState<TimerFaceId>('digital');
+
+  useEffect(() => {
+    const savedFace = localStorage.getItem('timerFace') as TimerFaceId;
+    if (savedFace) setActiveFace(savedFace);
+  }, []);
+
+  const handleFaceChange = (face: TimerFaceId) => {
+    setActiveFace(face);
+    localStorage.setItem('timerFace', face);
+  };
 
   const isActive = timerState?.status === 'running';
   const isPaused = timerState?.status === 'paused';
@@ -270,13 +283,13 @@ export function useTimer() {
 
         if (totalSecondsToday >= targetSeconds) {
           const userDocRef = doc(firestore, 'users', user.uid);
-          const lastUpdate = userData.lastStreakUpdate;
+          const lastUpdate = userData?.lastStreakUpdate;
           const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
           if (lastUpdate !== today) {
             let newStreak = 1;
             if (lastUpdate === yesterday) {
-              newStreak = (userData.streak || 0) + 1;
+              newStreak = (userData?.streak || 0) + 1;
             }
             await updateDoc(userDocRef, {
               streak: newStreak,
@@ -359,6 +372,8 @@ export function useTimer() {
     handleModeChange,
     handleSubjectChange,
     handleDurationChange,
-    setSelectedSubjectId
+    setSelectedSubjectId,
+    activeFace,
+    handleFaceChange
   };
 }

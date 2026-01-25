@@ -5,9 +5,9 @@
 
 @layer base {
   :root, [data-theme="default"] {
-    --background: 240 10% 99%;
+    --background: 240 10% 98%;
     --foreground: 222.2 84% 4.9%;
-    --card: 240 10% 99%;
+    --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
@@ -24,20 +24,24 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 215 85% 55%;
-    --radius: 0.75rem;
-    --chart-1: 12 76% 61%;
+    --radius: 1rem;
+    --chart-1: 215 85% 55%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    
+    /* Animation Easing */
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+    --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
   }
 
   .dark:root, .dark[data-theme="default"] {
-    --background: 224 71% 4%;
+    --background: 240 10% 4%;
     --foreground: 210 40% 98%;
-    --card: 224 71% 4%;
+    --card: 240 10% 4%;
     --card-foreground: 210 40% 98%;
-    --popover: 224 71% 4%;
+    --popover: 240 10% 4%;
     --popover-foreground: 210 40% 98%;
     --primary: 215 85% 55%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -56,54 +60,54 @@
 
   [data-theme="forest"] {
     --primary: 158 64% 52%;
-    --background: 120 60% 97%;
+    --background: 150 20% 98%;
     --accent: 158 24% 88%;
-    --card: 120 60% 97%;
+    --card: 150 20% 98%;
   }
   .dark[data-theme="forest"] {
     --primary: 158 64% 52%;
-    --background: 160 50% 5%;
+    --background: 158 30% 4%;
     --accent: 158 34% 15%;
-    --card: 160 50% 5%;
+    --card: 158 30% 4%;
   }
 
   [data-theme="ocean"] {
     --primary: 205 90% 55%;
-    --background: 210 100% 98%;
+    --background: 205 20% 98%;
     --accent: 205 50% 92%;
-    --card: 210 100% 98%;
+    --card: 205 20% 98%;
   }
   .dark[data-theme="ocean"] {
     --primary: 205 90% 55%;
-    --background: 220 60% 6%;
+    --background: 205 30% 4%;
     --accent: 215 40% 16%;
-    --card: 220 60% 6%;
+    --card: 205 30% 4%;
   }
 
   [data-theme="sunset"] {
     --primary: 20 90% 60%;
-    --background: 30 100% 97%;
+    --background: 20 20% 98%;
     --accent: 25 80% 90%;
-    --card: 30 100% 97%;
+    --card: 20 20% 98%;
   }
   .dark[data-theme="sunset"] {
     --primary: 20 90% 60%;
-    --background: 20 40% 5%;
+    --background: 20 30% 4%;
     --accent: 20 30% 15%;
-    --card: 20 40% 5%;
+    --card: 20 30% 4%;
   }
 
   [data-theme="matrix"] {
     --primary: 130 100% 40%;
-    --background: 0 0% 95%;
-    --accent: 0 0% 80%;
-    --card: 0 0% 95%;
+    --background: 130 10% 98%;
+    --accent: 130 20% 90%;
+    --card: 130 10% 98%;
   }
   .dark[data-theme="matrix"] {
     --primary: 130 100% 50%;
-    --background: 0 0% 2%;
+    --background: 130 30% 2%;
     --accent: 130 50% 10%;
-    --card: 0 0% 2%;
+    --card: 130 30% 2%;
   }
 }
 
@@ -112,21 +116,51 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
   }
 }
 
 @layer utilities {
+  .glass {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 dark:border-white/5;
+  }
+  
+  .glass-card {
+    @apply bg-white/50 dark:bg-black/40 backdrop-blur-md border border-white/20 dark:border-white/10;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70;
+  }
+
   .animate-pulse-slow {
-      animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      animation: pulse-slow 3s var(--ease-in-out-cubic) infinite;
+  }
+
+  .timer-digit {
+    font-variant-numeric: tabular-nums;
   }
 
   @keyframes pulse-slow {
     0%, 100% {
       opacity: 1;
+      transform: scale(1);
     }
     50% {
-      opacity: 0.7;
+      opacity: 0.8;
+      transform: scale(0.99);
     }
+  }
+
+  .breathing {
+    animation: breathing 4s var(--ease-in-out-cubic) infinite;
+  }
+
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.02); opacity: 0.9; }
   }
 }

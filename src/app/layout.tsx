@@ -14,6 +14,14 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   title: 'fenrirstudy',
   description: 'A personal study analytics system to enhance focus and productivity.',
+  manifest: '/manifest.json',
+  themeColor: '#09090b',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Fenrir',
+  },
 };
 
 export default function RootLayout({

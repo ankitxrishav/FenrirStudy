@@ -1,3 +1,5 @@
+# FenrirStudy 
+> **View the full documentation here: [documentation.md](documentation.md)**
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
 [![Netlify](https://img.shields.io/badge/Netlify-Deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-Framework-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -6,84 +8,61 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Database-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
-# fenrirstudy 
-> **View the full documentation here: [documentation.md](documentation.md)**
+# Update v6.0 & v7.0 🐺
+<h3> Cognitive Flow Intelligence & Progressive Ritual </h3>
 
-# Update 5.7
-<h3> Enhanced UI, Subject Management & goal page added </h3>
+- **Intelligence Dashboard**: 5-layer intelligence engine deriving deep behavioral insights, temporal heatmaps, and subject stability metrics.
+- **Neural Insights**: Rules-based, personalized analysis of focus habits and momentum curves.
+- **Ritual Identity System**: Global header-based theme and watch face customization suite.
+- **PWA Integration**: Fully installable on mobile and desktop with premium custom icons and a standalone app experience.
+- **UI Architecture**: High-contrast premium glassmorphism, responsive across all devices, with fluid Framer Motion rituals.
 
-- **NEW GOAL PAGE ADDED**: That will allow users to set daily study goals and track their progress.
-- **Subject Management**: Enhanced the subjects management dashboard with features to edit and archive subjects.
-- **Infrastructure**: Fixed TypeScript type mismatches and improved user profile initialization.
-- **Reliability**: Resolved Firestore permission errors by handling non-existent documents in security rules.
-- **Brand Identity**: Integrated official logo (`public/icon/logo.svg`) into the app header.
-- **UX Upgrade**: Redesigned navigation bar with text labels, responsive layout for all devices, and fluid Framer Motion animations.
-- **Functionality**: Fully implemented Subject Edit feature in the subjects management dashboard.
-
+- **NEW GOAL PAGE**: Personalized daily study goals and progress tracking.
+- **Subject Management**: Enhanced subject rituals with live editing and archival.
+- **Infrastructure**: Clean production build verification and Firestore security hardening.
 
 Modern, full-stack study tracker to time sessions, manage subjects, and visualize study habits.
 
-Live Demos
+## Live Demos
 - Vercel: https://fenrirstudy.vercel.app/
 - Netlify: https://fenrirstudy.netlify.app/
 
-Core Features
-- Secure Google Authentication (Firebase Auth) with automatic profile creation
-- Dual-mode timer: Pomodoro (countdown) and Stopwatch (count-up)
+## Core Features
+- Secure Google Authentication (Firebase Auth)
+- Dual-mode timer: Pomodoro and Stopwatch
 - Subject management: create, color-code, archive
-- Automatic session tracking (persisted to Firestore)
-- Dashboard with charts and session history
-- Light/Dark themes and multiple timer themes
-- Responsive layout with desktop view toggles
+- Automatic session tracking and persistence
+- Responsive layout with desktop rituals
+- Light/Dark themes and multiple watch faces
 
-Tech Stack
+## Tech Stack
 - Next.js (App Router)
 - TypeScript
 - Tailwind CSS & shadcn/ui
 - Firebase Firestore & Auth
-- Vercel / Netlify deployment
 
-Getting Started (Local)
+## Getting Started (Local)
 
 1. Clone the Repository
-
 ```bash
 git clone https://github.com/ankitxrishav/FenrirStudy.git
 cd FenrirStudy
 ```
 
 2. Install Dependencies
-
 ```bash
 npm install
 ```
 
 3. Set Up Environment Variables
-
-Create a `.env.local` file in your project root and add your Firebase project credentials. You can get these from your Firebase project settings.
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-auth-domain"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-storage-bucket"
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-messaging-sender-id"
-NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="your-measurement-id"
-```
+Create a `.env.local` file with your Firebase credentials.
 
 4. Run the Development Server
-
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
-
 ---
 
 ## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-
+This project is licensed under the MIT License.

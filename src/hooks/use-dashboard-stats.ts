@@ -103,6 +103,29 @@ export function useDashboardStats(sessions: Session[] | null, subjects: Subject[
         // --- LAYER 4: PROGRESS & TRENDS ---
         const momentum = timePrevWeek > 0 ? ((timeThisWeek - timePrevWeek) / timePrevWeek) * 100 : 0;
 
+        // Long-term Averages (Daily Average based on Active Days)
+        let avgTimePerWeek = 0;
+        let avgTimePerMonth = 0;
+
+        if (sessions.length > 0) {
+            // 1. Average Daily Study Time (Last 7 Days)
+            // Logic: Total Time in Last 7 Days / Count of Days with sessions in Last 7 Days
+            const uniqueDaysWeek = new Set(
+                thisWeekSessions.map(s => format(new Date(s.startTime), 'yyyy-MM-dd'))
+            ).size;
+            avgTimePerWeek = uniqueDaysWeek > 0 ? timeThisWeek / uniqueDaysWeek : 0;
+
+            // 2. Average Daily Study Time (Last 30 Days)
+            const last30DaysStart = startOfDay(subDays(now, 29));
+            const thisMonthSessions = sessions.filter(s => isAfter(new Date(s.startTime), last30DaysStart));
+            const timeThisMonth = thisMonthSessions.reduce((acc, s) => acc + s.duration, 0);
+
+            const uniqueDaysMonth = new Set(
+                thisMonthSessions.map(s => format(new Date(s.startTime), 'yyyy-MM-dd'))
+            ).size;
+            avgTimePerMonth = uniqueDaysMonth > 0 ? timeThisMonth / uniqueDaysMonth : 0;
+        }
+
         // --- LAYER 5: PERSONALIZED INSIGHTS ---
         const insights = [];
         if (momentum > 10) insights.push("Your momentum is surging this week. Capitalize on this energy.");
@@ -119,7 +142,9 @@ export function useDashboardStats(sessions: Session[] | null, subjects: Subject[
                 timePrevWeek,
                 avgSessionDuration,
                 longestSession,
-                momentum
+                momentum,
+                avgTimePerWeek,
+                avgTimePerMonth
             },
             subjects: {
                 distribution: subjectDistribution,

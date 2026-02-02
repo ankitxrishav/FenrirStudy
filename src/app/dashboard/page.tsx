@@ -143,6 +143,32 @@ export default function DashboardPage() {
                     <Card className="glass-card overflow-hidden group">
                         <CardHeader className="pb-2 space-y-0">
                             <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                <span>Daily Avg / Week</span>
+                                <BarChart3 className="h-3 w-3" />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerWeek)}</div>
+                            <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 7)</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="glass-card overflow-hidden group">
+                        <CardHeader className="pb-2 space-y-0">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                <span>Daily Avg / Month</span>
+                                <Calendar className="h-3 w-3" />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerMonth)}</div>
+                            <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 30)</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="glass-card overflow-hidden group">
+                        <CardHeader className="pb-2 space-y-0">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                                 <span>Avg Period</span>
                                 <Activity className="h-3 w-3" />
                             </div>

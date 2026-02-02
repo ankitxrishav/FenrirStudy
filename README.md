@@ -14,6 +14,7 @@
 <h3> Cognitive Flow Intelligence & Progressive Ritual </h3>
 
 - **Intelligence Dashboard**: 5-layer intelligence engine deriving deep behavioral insights, temporal heatmaps, and subject stability metrics.
+- **Daily Study Pulse**: Real-time calculation of daily study averages (Weekly/Monthly) based on active study days.
 - **Neural Insights**: Rules-based, personalized analysis of focus habits and momentum curves.
 - **Ritual Identity System**: Global header-based theme and watch face customization suite.
 - **PWA Integration**: Fully installable on mobile and desktop with premium custom icons and a standalone app experience.

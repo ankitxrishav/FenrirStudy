@@ -1,155 +1,156 @@
-# FenrirStudy Documentation
+# FenrirStudy System Documentation v7.0
 
-FenrirStudy is a personalized study analytics system designed to enhance focus and productivity through structured timing and data-driven insights. Built with a modern tech stack, it provides students with a powerful toolkit for managing their study habits.
+![Status](https://img.shields.io/badge/System-Operational-emerald?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-7.0.0-blue?style=for-the-badge)
 
-## Architecture Overview
+## 1. Executive Summary
+**FenrirStudy** is not merely a time-tracking application; it is a **Cognitive Flow Enhancement System** designed for high-performance academic and professional environments. It integrates precise time-management tools with a deep analytical engine to quantify focus, track behavioral patterns, and optimize study rituals. 
 
-FenrirStudy is a full-stack web application leveraging the following technologies:
-
-- **Framework**: [Next.js](https://nextjs.org/) (App Router) for an optimized React development experience.
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) for utility-first styling and [Shadcn UI](https://ui.shadcn.com/) for accessible, premium components.
-- **Backend & Persistence**: [Firebase](https://firebase.google.com/) provides Authentication and Firestore for real-time data storage.
-- **Animations**: [Framer Motion](https://www.framer.com/motion/) for smooth, interactive UI transitions.
-- **Icons**: [Lucide React](https://lucide.dev/) for a consistent and clean iconography.
+Built on a robust **Next.js** and **Firebase** architecture, it delivers a premium, distraction-free user experience characterized by fluid "Ritual" animations (Framer Motion) and a "Glassmorphism" aesthetic that reduces visual fatigue during long sessions.
 
 ---
 
-## Project Structure
+## 2. System Architecture
+
+### 2.1 Technology Stack
+The application leverages a modern, type-safe stack designed for performance, scalability, and developer experience.
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Core Framework** | **Next.js 14** (App Router) | Server-side rendering, routing, and React server components. |
+| **Language** | **TypeScript** | Strict static typing for robust logic and schema validation. |
+| **Styling Engine** | **Tailwind CSS** | Utility-first, responsive design system. |
+| **UI Component Lib** | **Shadcn/UI** | Accessible, headless components styled for a premium feel. |
+| **Motion Engine** | **Framer Motion** | Physics-based animations for UI transitions and micro-interactions. |
+| **Backend & Auth** | **Firebase** | Authentication, NoSQL realtime database (Firestore). |
+| **Icons** | **Lucide React** | Consistent, stroke-based iconography. |
+
+### 2.2 Directory Structure
+The codebase follows a modular, feature-based architecture:
 
 ```text
 src/
-├── app/               # Next.js App Router routes and layouts
-│   ├── dashboard/     # User analytics and overview
-│   ├── history/       # Session logs and records
-│   ├── login/         # Authentication views
-│   ├── settings/      # User preferences and data export
-│   ├── subjects/      # Subject management
-│   └── layout.tsx     # Global layout with header and navigation
-├── components/        # Reusable UI components
-│   ├── app/           # App-specific business components (Timer, Dashboard fragments)
-│   └── ui/            # Generic Shadcn UI components
-├── firebase/          # Firebase configuration and custom hooks
-│   ├── auth/          # Authentication hooks (useUser)
-│   ├── firestore/     # Data fetching hooks (useDoc, useCollection)
-│   └── config.ts      # Firebase SDK initialization
-├── hooks/             # Custom React hooks (useTimer, useToast)
-└── lib/               # Utility functions and type definitions
+├── app/                 # Next.js App Router (Routes & Layouts)
+│   ├── dashboard/       # Analytical engine & visualization
+│   ├── history/         # Session archival & retrieval
+│   └── ...
+├── components/          # UI Logic
+│   ├── app/             # Domain-specific modules (Timer, Stats Cards)
+│   └── ui/              # Foundation primitives (Buttons, Cards, Modals)
+├── firebase/            # Infrastructure Layer
+│   ├── auth/            # Auth hooks & context
+│   └── firestore/       # Generic data access layer (DAL)
+├── hooks/               # Application Logic / State Machines
+│   ├── use-timer.tsx    # Core timer logic engine
+│   └── use-dashboard... # Statistical analysis hooks
+└── lib/                 # Shared Utilities & Type Definitions
 ```
 
 ---
 
-## Core Features
+## 3. Core Modules & Intelligence
 
-### 1. Multi-Mode Timer
-The study timer supports two primary modes:
-- **Pomodoro**: Customizable focus sessions with accompanying break intervals.
-- **Stopwatch**: Open-ended tracking for flexible study sessions.
-The timer state is persisted across devices, allowing users to resume their focus anywhere.
+### 3.1 The Time Engine (`use-timer`)
+The heart of FenrirStudy is a custom-built, dual-mode timer engine.
+- **Precision State Management**: Handles complex states (`idle`, `running`, `paused`, `break`) with sub-second accuracy.
+- **Persistence Layer**: Automatically syncs active timer state to Firestore, allowing users to **roam between devices** without losing their session context.
+- **Modes**:
+  - **Pomodoro Protocol**: Structured 25/5 intervals for high-intensity focus.
+  - **Flow Mode (Stopwatch)**: Open-ended tracking for deep work sessions.
 
-### 2. Subject Management
-Subjects act as categories for study sessions.
-- **Customization**: Assign colors and priorities (Low, Medium, High).
-- **Organization**: Archive subjects that are no longer active to keep the focus on current goals.
+### 3.2 Intelligence Dashboard (Analytical Engine)
+The dashboard provides actionable intelligence rather than just raw data. It processes session history in real-time to generate:
+- **Daily Study Pulse**: sophisticated average calculation (`Total Time / Active Days`) for weekly and monthly windows, filtering out inactive days to show true capacity.
+- **Temporal Heatmaps**: Visualizes peak productivity hours (0-24h) to identify "Biological Prime Time".
+- **Subject Stability**: Tracks consistency % per subject, identifying neglected areas before they become critical.
+- **Momentum**: Calculates week-over-week velocity to visualize progress trends.
 
-### 3. Analytics Dashboard
-A comprehensive view of study progress:
-- **Time Studied**: Daily and weekly aggregates.
-- **Focus Score**: A percentage-based metric reflecting session completion and quality.
-- **Consistency Streak**: Encourages daily study habits by tracking consecutive days with activity.
-- **Weekly Overview**: Visual charts showing time distribution across the week.
-
-### 4. Session History
-A detailed log of all completed study sessions, filterable by subject and status.
-
-### 5. Personalized Settings
-- **Duration Tuning**: Set default Pomodoro and break lengths.
-- **Engagement**: Toggle notifications for session end and break reminders.
-- **Data Portability**: Export your entire history as **CSV** or **JSON**.
+### 3.3 Subject Rituals
+Subjects are treated as "Rituals" rather than simple tags.
+- **Visual Identity**: Each subject has a distinct color code and priority level.
+- **Lifecycle Management**: Subjects can be archived to keep the active workspace clean while preserving historical data.
 
 ---
 
-## Technical Details
+## 4. Data Dictionary (Schema)
 
-### Data Model (Firestore)
+The database is built on **Cloud Firestore** and consists of three primary high-level collections.
 
-#### **Users** (`/users/{uid}`)
-Stores user profile information and global application settings.
+### 4.1 Users Collection (`/users/{uid}`)
+Contains user identity, global preferences, and calculated streaks.
 ```typescript
-type User = {
+interface User {
   uid: string;
-  displayName: string;
   email: string;
-  streak: number;
-  settings?: {
-    pomodoroDuration: number;
-    shortBreakDuration: number;
-    longBreakDuration: number;
+  displayName: string;
+  photoURL: string;
+  streak: number;           // Current daily streak count
+  lastStreakUpdate: string; // ISO Date of the last valid streak increment
+  settings: {
+    pomodoroDuration: number;   // Minutes (default: 25)
+    shortBreakDuration: number; // Minutes (default: 5)
+    longBreakDuration: number;  // Minutes (default: 15)
+    studyTargetHours: number;   // Daily Goal (1-12 hours)
     sessionEndAlert: boolean;
     breakReminder: boolean;
-    studyTargetHours: number;
-  };
-};
+  }
+}
 ```
 
-#### **Subjects** (`/subjects/{id}`)
-Stores study categories created by users.
+### 4.2 Subjects Collection (`/subjects/{id}`)
+Represents a study category or project.
 ```typescript
-type Subject = {
+interface Subject {
   id: string;
   userId: string;
   name: string;
-  color: string;
+  color: string;            // Hex code (e.g., #FF5733)
   priority: 'low' | 'medium' | 'high';
-  archived: boolean;
-};
+  archived: boolean;        // Soft-delete flag
+  createdAt: string;        // ISO Date
+}
 ```
 
-#### **Sessions** (`/sessions/{id}`)
-Tracks historical study performance.
+### 4.3 Sessions Collection (`/sessions/{id}`)
+Immutable record of a completed focus block.
 ```typescript
-type Session = {
+interface Session {
+  id: string;
   userId: string;
   subjectId: string;
   mode: 'pomodoro' | 'stopwatch';
-  startTime: string;
-  endTime: string;
-  duration: number; // in seconds
+  startTime: string;        // ISO Date
+  endTime: string;          // ISO Date
+  duration: number;         // Total focused seconds
+  focusScore: number;       // Calculated quality score (0-100)
   status: 'completed' | 'stopped';
-};
+}
 ```
-
-### State Management & Hooks
-- **[useTimer](file:///Users/ankitkumar/Desktop/FenrirStudy/src/hooks/use-timer.tsx#25-326)**: The central logic for the study timer. Manages tick intervals, state transitions, and Firestore synchronization of the `timerState`.
-- **[useUser](file:///Users/ankitkumar/Desktop/FenrirStudy/src/firebase/auth/use-user.ts#12-85)**: Manages the Firebase Auth state and automatically creates/syncs user profile documents.
-- **[useDoc](file:///Users/ankitkumar/Desktop/FenrirStudy/src/firebase/firestore/use-doc.ts#13-51) & `useCollection`**: Generic, typed wrappers for real-time Firestore synchronization using `onSnapshot`.
 
 ---
 
-## Setup & Development
+## 5. Developer Guide
 
-### Prerequisites
-- Node.js (Latest LTS)
-- A Firebase Project (with Auth and Firestore enabled)
+### 5.1 Environment Setup
+The project requires a configured Firebase project. Create a `.env.local` file in the root:
 
-### Installation
-1.  Clone the repository.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Configure environment variables in [.env.local](file:///Users/ankitkumar/Desktop/FenrirStudy/.env.local):
-    ```env
-    NEXT_PUBLIC_FIREBASE_API_KEY="..."
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="..."
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID="..."
-    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="..."
-    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="..."
-    NEXT_PUBLIC_FIREBASE_APP_ID="..."
-    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="..."
-    ```
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY="<YOUR_API_KEY>"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="<YOUR_PROJECT_ID>.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="<YOUR_PROJECT_ID>"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="<YOUR_PROJECT_ID>.appspot.com"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="<SENDER_ID>"
+NEXT_PUBLIC_FIREBASE_APP_ID="<APP_ID>"
+```
 
-### Available Scripts
-- `npm run dev`: Starts the development server.
-- `npm run build`: Builds the production application.
-- `npm run lint`: Runs ESLint for code quality checks.
-- `npm run typecheck`: Performs static type checking with TypeScript.
+### 5.2 Scripts & Commands
+- **Development**: `npm run dev` - Starts the hot-reloading dev server on `localhost:3000`.
+- **Production Build**: `npm run build` - Compiles the application for deployment (Vercel/Netlify).
+- **Type Validation**: `npm run typecheck` - Runs the TypeScript compiler to ensure type safety.
+
+---
+
+## 6. Access & Licensing
+- **Live Deployment**: [FenrirStudy on Vercel](https://fenrirstudy.vercel.app/)
+- **License**: MIT License. Open source for educational and personal modification.
+
+For any inquiries regarding the "Cognitive Flow" methodology or contributions, please refer to the repository owner.

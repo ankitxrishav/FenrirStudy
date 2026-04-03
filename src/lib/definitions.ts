@@ -71,3 +71,41 @@ export type TimerState = {
   accumulatedTime: number;
 }
 
+// ==========================================
+// HABIT ROUTINE TRACKER
+// ==========================================
+
+export type HabitCategory = 'exercise' | 'health' | 'learning' | 'work' | 'mindfulness' | 'custom';
+
+export const HABIT_CATEGORY_META: Record<HabitCategory, { label: string; icon: string; color: string }> = {
+  exercise: { label: 'Exercise', icon: '💪', color: '#10b981' },
+  health: { label: 'Health', icon: '🥗', color: '#f59e0b' },
+  learning: { label: 'Learning', icon: '🧠', color: '#3b82f6' },
+  work: { label: 'Work', icon: '💼', color: '#64748b' },
+  mindfulness: { label: 'Mindfulness', icon: '🧘', color: '#ec4899' },
+  custom: { label: 'Custom', icon: '⭐', color: '#f97316' },
+};
+
+export type Habit = {
+  id: string;
+  userId: string;
+  name: string;
+  category: HabitCategory;
+  frequencyType: 'daily' | 'weekly';
+  weekDays: number[];   // 0=Sun … 6=Sat, used when frequencyType='weekly'
+  reminderTime: string | null; // 'HH:mm' or null
+  startTime?: string | null;    // 'HH:mm' or null
+  endTime?: string | null;      // 'HH:mm' or null
+  order: number;
+  createdAt: string; // ISO string
+};
+
+export type HabitLog = {
+  id: string;
+  habitId: string;
+  userId: string;
+  date: string;      // 'yyyy-MM-dd'
+  status: 'completed' | 'pending';
+  timestamp: string; // ISO string — when the log was last updated
+};
+

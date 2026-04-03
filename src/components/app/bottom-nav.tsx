@@ -5,7 +5,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, LayoutDashboard, Book, History as HistoryIcon, Settings, Target } from 'lucide-react';
+import { Home, LayoutDashboard, Book, History as HistoryIcon, Settings, Target, Repeat2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function BottomNav() {
@@ -15,6 +15,7 @@ export default function BottomNav() {
     { href: '/', label: 'Timer', icon: Home },
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/goals', label: 'Goals', icon: Target },
+    { href: '/routine', label: 'Routine', icon: Repeat2 },
     { href: '/subjects', label: 'Subjects', icon: Book },
     { href: '/history', label: 'History', icon: HistoryIcon },
     { href: '/settings', label: 'Settings', icon: Settings },

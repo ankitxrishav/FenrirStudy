@@ -56,5 +56,31 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    /* =========================
+       HABITS
+       ========================= */
+    match /habits/{habitId} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow get, update, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow list: if isSignedIn();
+    }
+
+    /* =========================
+       HABIT LOGS
+       ========================= */
+    match /habitLogs/{logId} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow get, update, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow list: if isSignedIn();
+    }
+
   }
 }

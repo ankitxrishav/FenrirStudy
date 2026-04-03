@@ -10,19 +10,16 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Database-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
-# Update v6.0 & v7.0 🐺
-<h3> Cognitive Flow Intelligence & Progressive Ritual </h3>
+# Update v7.o 🐺
+<h3> Habit Intelligence & Unified Dashboard </h3>
 
-- **Intelligence Dashboard**: 5-layer intelligence engine deriving deep behavioral insights, temporal heatmaps, and subject stability metrics.
-- **Daily Study Pulse**: Real-time calculation of daily study averages (Weekly/Monthly) based on active study days.
-- **Neural Insights**: Rules-based, personalized analysis of focus habits and momentum curves.
-- **Ritual Identity System**: Global header-based theme and watch face customization suite.
-- **PWA Integration**: Fully installable on mobile and desktop with premium custom icons and a standalone app experience.
-- **UI Architecture**: High-contrast premium glassmorphism, responsive across all devices, with fluid Framer Motion rituals.
-
-- **NEW GOAL PAGE**: Personalized daily study goals and progress tracking.
-- **Subject Management**: Enhanced subject rituals with live editing and archival.
-- **Infrastructure**: Clean production build verification and Firestore security hardening.
+- **Unified Dashboard Migration**: Successfully migrated habit analytics into the main Dashboard. Switch seamlessly between study performance and habit consistency with a tabbed interface.
+- **Habit Intelligence System**: Advanced tracking for habit streaks, completion rates, and temporal heatmaps, now unified with study session intelligence.
+- **Starter Rituals**: Automatic seeding of core habits (Deep Work, Health, Exercise) for new users to ensure a resonant start.
+- **Interactive Starter Guide**: An animated, dismissible onboarding guide for the habit system to help users master their routine.
+- **Time-Windowed Completion**: Habits can now have specific start and end times, enforcing discipline and preventing "backfilling" for past or future dates.
+- **Mobile Touch Optimization**: Re-engineered the habit list and date selector with native-feel scroll-snap and tap-friendly "More" menus for the ultimate smartphone experience.
+- **PWA Excellence**: Optimized the progressive web app for quick access to routine management on both iOS and Android.
 
 Modern, full-stack study tracker to time sessions, manage subjects, and visualize study habits.
 

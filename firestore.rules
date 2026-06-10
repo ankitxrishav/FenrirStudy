@@ -82,5 +82,113 @@ service cloud.firestore {
       allow list: if isSignedIn();
     }
 
+    /* =========================
+       ROOMS
+       ========================= */
+    function isRoomMember(roomId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid));
+    }
+
+    function isRoomOwner(roomId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId == request.auth.uid;
+    }
+
+    match /rooms/{roomId} {
+      // Anyone signed in can read a room doc (needed for join by code)
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+
+      // Only signed-in users can create a room (they set themselves as owner)
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      // Owner can update anything; members can update streak/activity; joining user can add themselves
+      allow update: if (isSignedIn() && resource.data.ownerId == request.auth.uid)
+        // A user can join: add themselves to memberIds and bump totalMemberCount
+        || (isSignedIn()
+            && request.auth.uid in request.resource.data.memberIds
+            && !(request.auth.uid in resource.data.memberIds)
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['memberIds', 'totalMemberCount']))
+        // A user can leave: remove themselves from memberIds and decrement totalMemberCount
+        || (isSignedIn()
+            && !(request.auth.uid in request.resource.data.memberIds)
+            && request.auth.uid in resource.data.memberIds
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['memberIds', 'totalMemberCount']))
+        // Existing members can update streak/activity fields
+        || (isRoomMember(roomId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['collectiveStreak', 'lastActivityDate', 'totalMemberCount']));
+
+      // Only owner can delete
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /rooms/{roomId}/members/{memberId} {
+      // All room members can read the members subcollection
+      allow read: if isRoomMember(roomId) || memberId == request.auth.uid;
+
+      // A user can write their own member document (join/update presence)
+      allow create: if isSignedIn() && memberId == request.auth.uid;
+      allow update: if isSignedIn() && memberId == request.auth.uid;
+
+      // Owner can also update any member (e.g. kick) and delete members, and users can leave (delete their own)
+      allow update: if isRoomOwner(roomId);
+      allow delete: if isSignedIn() && (memberId == request.auth.uid || isRoomOwner(roomId));
+    }
+
+    match /rooms/{roomId}/messages/{messageId} {
+      allow read: if isRoomMember(roomId);
+      allow create: if isRoomMember(roomId)
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /rooms/{roomId}/challenges/{challengeId} {
+      allow read: if isRoomMember(roomId);
+      allow create: if isRoomOwner(roomId);
+      // Members can update participantIds only (joining); owner can update anything
+      allow update: if isRoomOwner(roomId)
+        || (isRoomMember(roomId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds']));
+      allow delete: if isRoomOwner(roomId);
+    }
+
+    match /rooms/{roomId}/challengeProgress/{progressId} {
+      allow read: if isRoomMember(roomId);
+      allow create, update: if isRoomMember(roomId)
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /rooms/{roomId}/goals/{goalId} {
+      allow read: if isRoomMember(roomId);
+      allow create: if isRoomMember(roomId)
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isRoomMember(roomId)
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /rooms/{roomId}/pairs/{pairId} {
+      allow read: if isRoomMember(roomId);
+      allow create: if isRoomMember(roomId);
+      allow update, delete: if isRoomMember(roomId);
+    }
+
+    match /sessionReactions/{reactionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid;
+      allow delete: if isSignedIn()
+        && resource.data.fromUserId == request.auth.uid;
+    }
+
+    // Allow collectionGroup('members') query in useMyRooms()
+    match /{path=**}/members/{memberId} {
+      allow read: if isSignedIn() && (memberId == request.auth.uid || resource.data.userId == request.auth.uid);
+    }
+
   }
 }

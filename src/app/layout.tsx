@@ -57,7 +57,7 @@ export default function RootLayout({
                 <main className="flex-1 overflow-y-auto pt-16 pb-24">
                   {children}
                 </main>
-                <footer className="fixed bottom-0 inset-x-0 z-50 h-20 flex items-center justify-center">
+                <footer className="fixed bottom-0 inset-x-0 z-50 h-20 flex items-center justify-center pointer-events-none">
                   <BottomNav />
                 </footer>
               </div>

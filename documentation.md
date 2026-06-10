@@ -1,6 +1,6 @@
-# FenrirStudy System Documentation v7.0
+# FenrirStudy System Documentation v8.0
 
-![Status](https://img.shields.io/badge/System-Operational-emerald?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-7.0.0-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/System-Operational-emerald?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-8.0.0-blue?style=for-the-badge)
 
 ## 1. Executive Summary
 **FenrirStudy** is not merely a time-tracking application; it is a **Cognitive Flow Enhancement System** designed for high-performance academic and professional environments. It integrates precise time-management tools with a deep analytical engine to quantify focus, track behavioral patterns, and optimize study rituals. 
@@ -68,6 +68,14 @@ The dashboard provides actionable intelligence rather than just raw data. It pro
 Subjects are treated as "Rituals" rather than simple tags.
 - **Visual Identity**: Each subject has a distinct color code and priority level.
 - **Lifecycle Management**: Subjects can be archived to keep the active workspace clean while preserving historical data.
+
+### 3.4 Co-Study Rooms & Live Presence
+A complete multiplayer study experience to maintain accountability:
+- **Virtual Rooms**: Create private spaces with 6-character invite codes to study alongside friends.
+- **Live Sync Timers**: Instantly synchronize your local Pomodoro or Stopwatch with any active member in the room with a single click.
+- **Pihu The Mascot**: An animated, interactive feline companion that reacts to your current study state (Sleepy, Happy, Proud) with fluid, decoupled CSS/SVG animations.
+- **Real-time Status Engine**: A robust presence system that accurately tracks 'studying', 'idle', and 'offline' states based on active browser focus and heartbeat intervals.
+- **Accountability Pairs & Reactions**: Send real-time emoji reactions to members and form accountability pairs.
 
 ---
 

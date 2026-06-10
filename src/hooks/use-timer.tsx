@@ -67,6 +67,36 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<'pomodoro' | 'stopwatch'>('pomodoro');
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
     const [activeFace, setActiveFace] = useState<TimerFaceId>('digital');
+    const todayAccumulatedSecondsRef = useRef<number>(0);
+
+    const getStudySecondsTodayExcludingCurrent = useCallback(async (): Promise<number> => {
+        if (!firestore || !user) return 0;
+        try {
+            const sessionsRef = collection(firestore, 'sessions');
+            const todayStart = startOfDay(new Date());
+            const q = query(sessionsRef, where('userId', '==', user.uid));
+            const snap = await getDocs(q);
+            let total = 0;
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.startTime && new Date(data.startTime) >= todayStart) {
+                    total += data.duration || 0;
+                }
+            });
+            return total;
+        } catch (e) {
+            console.error("Error fetching study seconds today:", e);
+            return 0;
+        }
+    }, [firestore, user]);
+
+    useEffect(() => {
+        if (user && firestore) {
+            getStudySecondsTodayExcludingCurrent().then(total => {
+                todayAccumulatedSecondsRef.current = total;
+            });
+        }
+    }, [user, firestore, getStudySecondsTodayExcludingCurrent]);
 
     useEffect(() => {
         const savedFace = localStorage.getItem('timerFace') as TimerFaceId;
@@ -121,6 +151,21 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             if (startedAtMillis === 0) return;
             const elapsedSinceStart = (now - startedAtMillis) / 1000;
             const totalElapsedTime = timerState.accumulatedTime + elapsedSinceStart;
+
+            // Enforce limits:
+            // 1. Single subject session limit (8 hours = 28800 seconds)
+            const maxSessionTime = 28800;
+
+            // 2. Daily limit (22 hours = 79200 seconds)
+            const remainingDailyTime = Math.max(0, 79200 - todayAccumulatedSecondsRef.current);
+            const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
+
+            if (totalElapsedTime >= effectiveLimit) {
+                setDisplayTime(timerState.mode === 'pomodoro' ? Math.max(0, timerState.initialDuration - effectiveLimit) : effectiveLimit);
+                stop('completed');
+                return;
+            }
+
             if (timerState.mode === 'pomodoro') {
                 const remaining = Math.max(0, timerState.initialDuration - totalElapsedTime);
                 setDisplayTime(remaining);
@@ -156,6 +201,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        // Fetch and cache today's accumulated study seconds
+        const accumulatedToday = await getStudySecondsTodayExcludingCurrent();
+        todayAccumulatedSecondsRef.current = accumulatedToday;
+
         let accumulatedTime = 0;
         let sessionStartTime = serverTimestamp();
         let initialDuration = mode === 'pomodoro' ? customDuration * 60 : 0;
@@ -188,7 +237,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (startedAtMillis === 0) return;
         const elapsedSinceStart = (Date.now() - startedAtMillis) / 1000;
         const updateData = { status: 'paused', accumulatedTime: timerState.accumulatedTime + elapsedSinceStart, startedAt: null };
-        updateDoc(timerStateRef.current, updateData).catch(err => {
+        setDoc(timerStateRef.current, updateData, { merge: true }).catch(err => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: timerStateRef.current!.path, operation: 'update', requestResourceData: updateData }));
         });
     };
@@ -203,7 +252,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (intervalRef.current) clearInterval(intervalRef.current);
 
         // Instantly transition UI state in Firestore to "stopped"
-        // This prevents double-triggers if the function is called again before completion
         const resetState = {
             status: 'stopped',
             accumulatedTime: 0,
@@ -212,7 +260,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         };
 
         try {
-            await updateDoc(timerStateRef.current, resetState);
+            await setDoc(timerStateRef.current, resetState, { merge: true });
 
             let finalElapsedTime = timerState.accumulatedTime;
             if (timerState.status === 'running') {
@@ -220,16 +268,29 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 if (startedAtMillis > 0) finalElapsedTime += (Date.now() - startedAtMillis) / 1000;
             }
 
-            const finalDurationSeconds = Math.round(finalElapsedTime);
+            // Enforce capping limits when saving the session
+            const maxSessionTime = 28800; // 8 hours
+            const accumulatedToday = await getStudySecondsTodayExcludingCurrent();
+            const remainingDailyTime = Math.max(0, 79200 - accumulatedToday);
+            const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
+
+            let finalDurationSeconds = Math.round(finalElapsedTime);
+            if (finalDurationSeconds > effectiveLimit) {
+                finalDurationSeconds = Math.round(effectiveLimit);
+            }
 
             // Only save session if it's substantial (> 5s)
             if (finalDurationSeconds > 5 && toMillis(timerState.sessionStartTime) > 0) {
+                const startTimeMillis = toMillis(timerState.sessionStartTime);
+                const durationMs = finalDurationSeconds * 1000;
+                const endTimeISO = new Date(startTimeMillis + durationMs).toISOString();
+
                 const sessionPayload = {
                     userId: user.uid,
                     subjectId: timerState.subjectId,
                     mode: timerState.mode,
-                    startTime: new Date(toMillis(timerState.sessionStartTime)).toISOString(),
-                    endTime: new Date().toISOString(),
+                    startTime: new Date(startTimeMillis).toISOString(),
+                    endTime: endTimeISO,
                     duration: finalDurationSeconds,
                     pauseCount: 0,
                     status: finalStatus,
@@ -237,6 +298,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 };
 
                 await addDoc(collection(firestore, 'sessions'), sessionPayload);
+
+                // Update cache ref to include this saved session
+                todayAccumulatedSecondsRef.current = accumulatedToday + finalDurationSeconds;
 
                 if (finalStatus === 'completed' || finalStatus === 'stopped') {
                     toast({ title: "Session Saved!", description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.` });
@@ -281,27 +345,29 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (!timerStateRef.current) return;
         if (intervalRef.current) clearInterval(intervalRef.current);
         const resetState = { status: 'stopped', accumulatedTime: 0, startedAt: null, initialDuration: mode === 'pomodoro' ? customDuration * 60 : 0 };
-        updateDoc(timerStateRef.current, resetState);
+        // Only update if the doc exists (timerState not null)
+        if (timerState) setDoc(timerStateRef.current, resetState, { merge: true });
     };
 
     const handleModeChange = (newMode: 'pomodoro' | 'stopwatch') => {
         if (isIdle) {
             setMode(newMode);
-            if (timerStateRef.current) updateDoc(timerStateRef.current, { mode: newMode });
+            // Only persist if the timerState doc already exists
+            if (timerStateRef.current && timerState) setDoc(timerStateRef.current, { mode: newMode }, { merge: true });
         }
     };
 
     const handleSubjectChange = (subjectId: string) => {
         if (isIdle) {
             setSelectedSubjectId(subjectId);
-            if (timerStateRef.current) updateDoc(timerStateRef.current, { subjectId: subjectId });
+            if (timerStateRef.current && timerState) setDoc(timerStateRef.current, { subjectId: subjectId }, { merge: true });
         }
     };
 
     const handleDurationChange = (newDuration: number) => {
         if (isIdle && newDuration > 0 && newDuration <= 180) {
             setCustomDuration(newDuration);
-            if (timerStateRef.current) updateDoc(timerStateRef.current, { initialDuration: newDuration * 60 });
+            if (timerStateRef.current && timerState) setDoc(timerStateRef.current, { initialDuration: newDuration * 60 }, { merge: true });
         }
     };
 

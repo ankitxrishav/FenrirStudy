@@ -19,13 +19,16 @@ import {
     ZapOff,
     ArrowUpRight,
     ArrowDownRight,
-    Repeat2
+    Repeat2,
+    Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, where } from "firebase/firestore";
 import { Session, User, Subject } from "@/lib/definitions";
 import { useDoc } from "@/firebase";
+import { useMyRooms } from "@/hooks/use-room";
 import { doc } from "firebase/firestore";
 import LoadingScreen from "@/components/app/loading-screen";
 import { cn } from "@/lib/utils";
@@ -88,6 +91,9 @@ export default function DashboardPage() {
 
     // Fetch habits for analytics
     const { analytics: habitAnalytics } = useHabits(new Date());
+
+    // Fetch rooms for Active Rooms section
+    const { rooms } = useMyRooms();
 
     if (userLoading || sessionsLoading || !user || !stats) {
         return <LoadingScreen />;
@@ -391,6 +397,34 @@ export default function DashboardPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+                            {/* Active Rooms */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-primary" />
+                                    <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Active Rooms</h3>
+                                </div>
+                                {rooms.length === 0 ? (
+                                    <Link href="/rooms" className="block">
+                                        <div className="glass border border-white/10 rounded-xl px-5 py-4 text-sm text-muted-foreground hover:border-primary/30 transition-colors">
+                                            Join a study room to stay accountable with others &rarr;
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {rooms.map(room => (
+                                            <div key={room.id} className="glass border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between hover:border-primary/30 transition-colors">
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-sm truncate">{room.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}</p>
+                                                </div>
+                                                <Link href={`/rooms/${room.id}`} className="text-xs font-bold text-primary hover:underline shrink-0 ml-3">
+                                                    Open &rarr;
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </motion.div>
                     ) : (
                         <motion.div

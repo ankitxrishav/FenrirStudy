@@ -10,6 +10,16 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Database-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
+# Update v8.0 🐺
+<h3> Co-Study Rooms & Live Accountability </h3>
+
+- **Virtual Study Rooms**: Create and join private study rooms using 6-character invite codes.
+- **Live Sync Timers**: Seamlessly synchronize your local Pomodoro or Stopwatch with any active member in the room.
+- **Pihu The Mascot**: A highly interactive, animated feline companion that reacts to your current study state and provides motivation.
+- **Real-Time Presence Engine**: A robust backend architecture that tracks live status ('studying', 'idle', 'offline') across the room.
+- **Accountability Pairs**: Form accountability pairs with other members and send real-time emoji reactions to boost morale.
+- **Secure Room Management**: Owners have full control to manage settings, moderate members, and seamlessly delete rooms.
+
 # Update v7.o 🐺
 <h3> Habit Intelligence & Unified Dashboard </h3>
 

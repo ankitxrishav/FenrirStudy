@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Settings2 } from 'lucide-react';
+import { PlusCircle, Settings2, Users } from 'lucide-react';
 import { AddSubjectDialog } from './add-subject-dialog';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { addDoc, collection, query, serverTimestamp, where } from 'firebase/firestore';
+import { useMyRooms } from '@/hooks/use-room';
 import { Input } from '@/components/ui/input';
 import type { Subject } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +34,7 @@ export default function Timer() {
   const { toast } = useToast();
 
   const [isAddSubjectOpen, setAddSubjectOpen] = useState(false);
+  const { rooms, loading: roomsLoading } = useMyRooms();
 
   const subjectsQuery = useMemo(() => {
     return user && firestore ? query(collection(firestore, 'subjects'), where('userId', '==', user.uid), where('archived', '==', false)) : null;
@@ -162,6 +164,30 @@ export default function Timer() {
             onStop={() => stop('stopped')}
             onReset={reset}
           />
+
+          {user && (
+            <div className="w-full border-t border-white/5 pt-4 mt-2 flex flex-col items-center">
+              {roomsLoading ? (
+                <div className="text-xs text-muted-foreground animate-pulse">Loading study rooms...</div>
+              ) : rooms.length > 0 ? (
+                <Button
+                  onClick={() => router.push(`/rooms/${rooms[0].id}`)}
+                  className="w-full max-w-xs gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  variant="outline"
+                >
+                  <Users className="h-4 w-4" /> Go to {rooms[0].name} Room
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => router.push('/rooms')}
+                  className="w-full max-w-xs gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  variant="secondary"
+                >
+                  <Users className="h-4 w-4" /> Join or Create a Study Room
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       <AddSubjectDialog

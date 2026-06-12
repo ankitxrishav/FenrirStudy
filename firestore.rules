@@ -167,7 +167,9 @@ service cloud.firestore {
       allow read: if isRoomMember(roomId);
       allow create: if isRoomMember(roomId)
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isRoomMember(roomId)
+      allow update: if isRoomMember(roomId)
+        && (resource.data.userId == request.auth.uid || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed']));
+      allow delete: if isRoomMember(roomId)
         && resource.data.userId == request.auth.uid;
     }
 

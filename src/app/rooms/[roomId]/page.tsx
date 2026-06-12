@@ -50,7 +50,6 @@ type PanelId = "members" | "leaderboard" | "challenges" | "analytics" | "goals";
 
 const NAV_ITEMS: { id: PanelId; label: string; icon: React.ElementType }[] = [
   { id: "members", label: "Members", icon: Users },
-  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
   { id: "challenges", label: "Challenges", icon: Zap },
   { id: "analytics", label: "Analytics", icon: BarChart2 },
   { id: "goals", label: "Goals", icon: Target },
@@ -239,11 +238,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                     <MemberGrid roomId={roomId} members={members} />
                   </RoomErrorBoundary>
                 )}
-                {activePanel === "leaderboard" && (
-                  <RoomErrorBoundary fallbackLabel="Could not load leaderboard.">
-                    <RoomLeaderboard roomId={roomId} members={members} />
-                  </RoomErrorBoundary>
-                )}
+
                 {activePanel === "challenges" && (
                   <RoomErrorBoundary fallbackLabel="Could not load challenges.">
                     <RoomChallenges
@@ -295,6 +290,11 @@ export default function RoomPage({ params }: RoomPageProps) {
             )}
           </AnimatePresence>
         </div>
+      </div>
+
+      {/* ── Separate Leaderboard Section ── */}
+      <div className="w-full max-w-6xl mx-auto mt-6">
+        <RoomLeaderboard members={members} />
       </div>
 
       {/* Finish effect overlay */}

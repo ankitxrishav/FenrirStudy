@@ -53,6 +53,12 @@ export type User = {
   streak: number; // Current study target streak
   lastStreakUpdate?: string; // Last date the streak was maintained
   lastLogin?: string;
+  todaySeconds?: number;
+  todaySessions?: number;
+  weeklySeconds?: number;
+  weeklySessions?: number;
+  monthlySeconds?: number;
+  monthlySessions?: number;
 };
 
 // Represents the state of a user's timer, stored in Firestore
@@ -164,6 +170,10 @@ export type RoomMember = {
   finishedAt?: string | null;    // ISO string — set for ~4s when timer just completed
   todaySessions?: number;
   todaySeconds?: number;
+  weeklySessions?: number;
+  weeklySeconds?: number;
+  monthlySessions?: number;
+  monthlySeconds?: number;
 };
 
 export type RoomMessage = {

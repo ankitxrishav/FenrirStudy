@@ -81,6 +81,10 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
         finishedAt: null,
         todaySessions: currentUserData?.todaySessions ?? 0,
         todaySeconds: currentUserData?.todaySeconds ?? 0,
+        weeklySessions: currentUserData?.weeklySessions ?? 0,
+        weeklySeconds: currentUserData?.weeklySeconds ?? 0,
+        monthlySessions: currentUserData?.monthlySessions ?? 0,
+        monthlySeconds: currentUserData?.monthlySeconds ?? 0,
       };
 
       try {

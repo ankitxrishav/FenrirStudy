@@ -1387,7 +1387,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
     const nextMsg = pool.pop();
     if (nextMsg) {
       setDialoguePool(pool);
-      setSpeech(nextMsg);
+      setSpeech("I am Pihu. " + nextMsg);
       if (speechTimer.current) clearTimeout(speechTimer.current);
       speechTimer.current = setTimeout(() => setSpeech(null), 4000);
     }

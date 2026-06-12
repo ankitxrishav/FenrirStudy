@@ -164,7 +164,7 @@ export function RoomGoalBoard({ roomId, roomGoals }: RoomGoalBoardProps) {
                     className={cn(
                       "shrink-0 mt-0.5 h-5 w-5 rounded border flex items-center justify-center transition-colors",
                       goal.completed
-                        ? "bg-primary border-primary text-primary-foreground"
+                        ? "bg-emerald-500 border-emerald-500 text-white"
                         : "border-white/20 hover:border-primary/50"
                     )}
                   >

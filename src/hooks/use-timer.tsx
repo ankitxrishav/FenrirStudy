@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { startOfDay, format, subDays } from 'date-fns';
+import { startOfDay, startOfWeek, startOfMonth, format, subDays } from 'date-fns';
 import { doc, serverTimestamp, updateDoc, setDoc, addDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { TimerState, Session, User } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
@@ -69,42 +69,72 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [activeFace, setActiveFace] = useState<TimerFaceId>('digital');
     const todayAccumulatedSecondsRef = useRef<number>(0);
 
-    const getTodayStats = useCallback(async (): Promise<{ seconds: number, sessions: number }> => {
-        if (!firestore || !user) return { seconds: 0, sessions: 0 };
+    const getPeriodicStats = useCallback(async () => {
+        const defaultStats = {
+            today: { seconds: 0, sessions: 0 },
+            weekly: { seconds: 0, sessions: 0 },
+            monthly: { seconds: 0, sessions: 0 },
+        };
+        if (!firestore || !user) return defaultStats;
+        
         try {
             const sessionsRef = collection(firestore, 'sessions');
-            const todayStart = startOfDay(new Date());
+            const now = new Date();
+            const todayStart = startOfDay(now);
+            const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday start
+            const monthStart = startOfMonth(now);
+            
+            // We only need to query sessions from the start of the month (since month > week > day usually, or week if week started last month)
+            const minStart = new Date(Math.min(weekStart.getTime(), monthStart.getTime()));
+            
             const q = query(sessionsRef, where('userId', '==', user.uid));
+            // In a real prod environment we'd use a where('startTime', '>=', minStart.toISOString()) but we might need an index.
+            // Client side filtering for active users is okay for now.
             const snap = await getDocs(q);
-            let totalSeconds = 0;
-            let sessionCount = 0;
+            
+            const stats = { ...defaultStats };
+            
             snap.forEach(d => {
                 const data = d.data();
-                if (data.startTime && new Date(data.startTime) >= todayStart) {
-                    totalSeconds += data.duration || 0;
-                    sessionCount += 1;
+                if (!data.startTime) return;
+                const dDate = new Date(data.startTime);
+                
+                if (dDate >= todayStart) {
+                    stats.today.seconds += data.duration || 0;
+                    stats.today.sessions += 1;
+                }
+                if (dDate >= weekStart) {
+                    stats.weekly.seconds += data.duration || 0;
+                    stats.weekly.sessions += 1;
+                }
+                if (dDate >= monthStart) {
+                    stats.monthly.seconds += data.duration || 0;
+                    stats.monthly.sessions += 1;
                 }
             });
-            return { seconds: totalSeconds, sessions: sessionCount };
+            return stats;
         } catch (e) {
-            console.error("Error fetching study stats today:", e);
-            return { seconds: 0, sessions: 0 };
+            console.error("Error fetching study stats:", e);
+            return defaultStats;
         }
     }, [firestore, user]);
 
     useEffect(() => {
         if (user && firestore) {
-            getTodayStats().then(stats => {
-                todayAccumulatedSecondsRef.current = stats.seconds;
-                // We can also update user doc right here on initial load if we want
-                // to make sure it's fresh for other components
+            getPeriodicStats().then(stats => {
+                todayAccumulatedSecondsRef.current = stats.today.seconds;
+                
                 setDoc(doc(firestore, 'users', user.uid), {
-                    todaySeconds: stats.seconds,
-                    todaySessions: stats.sessions
+                    todaySeconds: stats.today.seconds,
+                    todaySessions: stats.today.sessions,
+                    weeklySeconds: stats.weekly.seconds,
+                    weeklySessions: stats.weekly.sessions,
+                    monthlySeconds: stats.monthly.seconds,
+                    monthlySessions: stats.monthly.sessions,
                 }, { merge: true }).catch(() => {});
             });
         }
-    }, [user, firestore, getTodayStats]);
+    }, [user, firestore, getPeriodicStats]);
 
     useEffect(() => {
         const savedFace = localStorage.getItem('timerFace') as TimerFaceId;
@@ -210,8 +240,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Fetch and cache today's accumulated study seconds
-        const stats = await getTodayStats();
-        todayAccumulatedSecondsRef.current = stats.seconds;
+        const stats = await getPeriodicStats();
+        todayAccumulatedSecondsRef.current = stats.today.seconds;
 
         let accumulatedTime = 0;
         let sessionStartTime = serverTimestamp();
@@ -278,8 +308,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
             // Enforce capping limits when saving the session
             const maxSessionTime = 28800; // 8 hours
-            const stats = await getTodayStats();
-            const remainingDailyTime = Math.max(0, 79200 - stats.seconds);
+            const stats = await getPeriodicStats();
+            const remainingDailyTime = Math.max(0, 79200 - stats.today.seconds);
             const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
 
             let finalDurationSeconds = Math.round(finalElapsedTime);
@@ -308,14 +338,18 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 await addDoc(collection(firestore, 'sessions'), sessionPayload);
 
                 // Re-fetch and update user doc with new stats after session save
-                const newStats = await getTodayStats();
+                const newStats = await getPeriodicStats();
                 await setDoc(doc(firestore, 'users', user.uid), {
-                    todaySeconds: newStats.seconds,
-                    todaySessions: newStats.sessions
+                    todaySeconds: newStats.today.seconds,
+                    todaySessions: newStats.today.sessions,
+                    weeklySeconds: newStats.weekly.seconds,
+                    weeklySessions: newStats.weekly.sessions,
+                    monthlySeconds: newStats.monthly.seconds,
+                    monthlySessions: newStats.monthly.sessions,
                 }, { merge: true });
 
                 // Update cache ref to include this saved session
-                todayAccumulatedSecondsRef.current = newStats.seconds;
+                todayAccumulatedSecondsRef.current = newStats.today.seconds;
 
                 if (finalStatus === 'completed' || finalStatus === 'stopped') {
                     toast({ title: "Session Saved!", description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.` });

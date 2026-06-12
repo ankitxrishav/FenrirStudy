@@ -69,34 +69,42 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [activeFace, setActiveFace] = useState<TimerFaceId>('digital');
     const todayAccumulatedSecondsRef = useRef<number>(0);
 
-    const getStudySecondsTodayExcludingCurrent = useCallback(async (): Promise<number> => {
-        if (!firestore || !user) return 0;
+    const getTodayStats = useCallback(async (): Promise<{ seconds: number, sessions: number }> => {
+        if (!firestore || !user) return { seconds: 0, sessions: 0 };
         try {
             const sessionsRef = collection(firestore, 'sessions');
             const todayStart = startOfDay(new Date());
             const q = query(sessionsRef, where('userId', '==', user.uid));
             const snap = await getDocs(q);
-            let total = 0;
+            let totalSeconds = 0;
+            let sessionCount = 0;
             snap.forEach(d => {
                 const data = d.data();
                 if (data.startTime && new Date(data.startTime) >= todayStart) {
-                    total += data.duration || 0;
+                    totalSeconds += data.duration || 0;
+                    sessionCount += 1;
                 }
             });
-            return total;
+            return { seconds: totalSeconds, sessions: sessionCount };
         } catch (e) {
-            console.error("Error fetching study seconds today:", e);
-            return 0;
+            console.error("Error fetching study stats today:", e);
+            return { seconds: 0, sessions: 0 };
         }
     }, [firestore, user]);
 
     useEffect(() => {
         if (user && firestore) {
-            getStudySecondsTodayExcludingCurrent().then(total => {
-                todayAccumulatedSecondsRef.current = total;
+            getTodayStats().then(stats => {
+                todayAccumulatedSecondsRef.current = stats.seconds;
+                // We can also update user doc right here on initial load if we want
+                // to make sure it's fresh for other components
+                setDoc(doc(firestore, 'users', user.uid), {
+                    todaySeconds: stats.seconds,
+                    todaySessions: stats.sessions
+                }, { merge: true }).catch(() => {});
             });
         }
-    }, [user, firestore, getStudySecondsTodayExcludingCurrent]);
+    }, [user, firestore, getTodayStats]);
 
     useEffect(() => {
         const savedFace = localStorage.getItem('timerFace') as TimerFaceId;
@@ -202,8 +210,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Fetch and cache today's accumulated study seconds
-        const accumulatedToday = await getStudySecondsTodayExcludingCurrent();
-        todayAccumulatedSecondsRef.current = accumulatedToday;
+        const stats = await getTodayStats();
+        todayAccumulatedSecondsRef.current = stats.seconds;
 
         let accumulatedTime = 0;
         let sessionStartTime = serverTimestamp();
@@ -270,8 +278,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
             // Enforce capping limits when saving the session
             const maxSessionTime = 28800; // 8 hours
-            const accumulatedToday = await getStudySecondsTodayExcludingCurrent();
-            const remainingDailyTime = Math.max(0, 79200 - accumulatedToday);
+            const stats = await getTodayStats();
+            const remainingDailyTime = Math.max(0, 79200 - stats.seconds);
             const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
 
             let finalDurationSeconds = Math.round(finalElapsedTime);
@@ -299,8 +307,15 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
                 await addDoc(collection(firestore, 'sessions'), sessionPayload);
 
+                // Re-fetch and update user doc with new stats after session save
+                const newStats = await getTodayStats();
+                await setDoc(doc(firestore, 'users', user.uid), {
+                    todaySeconds: newStats.seconds,
+                    todaySessions: newStats.sessions
+                }, { merge: true });
+
                 // Update cache ref to include this saved session
-                todayAccumulatedSecondsRef.current = accumulatedToday + finalDurationSeconds;
+                todayAccumulatedSecondsRef.current = newStats.seconds;
 
                 if (finalStatus === 'completed' || finalStatus === 'stopped') {
                     toast({ title: "Session Saved!", description: `You studied for ${Math.round(finalDurationSeconds / 60)} minutes.` });

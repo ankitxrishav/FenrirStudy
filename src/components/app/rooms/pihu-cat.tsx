@@ -619,10 +619,11 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
   useEffect(() => {
     if (greetingMode) {
       setTimeout(() => {
-        setSpeech("Welcome to FenrirStudy! Please sign in to start your cozy session. 🐾");
+        setSpeech("Hi! I'm Pihu! I'm here to help you focus. Pet me for options! 🐾");
         spawnParticles("✨", 8);
         playMeowSound(isMutedRef.current);
-      }, 1000);
+        setTimeout(() => setSpeech(null), 8000);
+      }, 800);
     }
   }, [greetingMode]);
 
@@ -1569,8 +1570,9 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
     
     return {
       position: "fixed" as const,
-      top: `${top}px`,
-      left: `${left}px`,
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
       width: isMobile ? `${menuWidth}px` : "320px",
       zIndex: 100,
     };
@@ -1582,7 +1584,8 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none z-60 select-none"
+      className="fixed inset-0 pointer-events-none select-none"
+      style={{ zIndex: 99999 }}
     >
       {/* Active Physics Toys */}
       {toys.map(toy => (

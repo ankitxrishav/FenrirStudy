@@ -17,6 +17,7 @@ import Image from 'next/image';
 import { useTimer } from '@/hooks/use-timer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StyleSelector } from './timer/style-selector';
+import { calculateUserLevel } from '@/lib/level';
 
 export function AppHeader() {
   const { user, loading } = useUser();
@@ -82,6 +83,12 @@ export function AppHeader() {
                 <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 glass border border-white/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                   <span className="text-[8px] font-bold uppercase tracking-widest text-foreground">Watch Style</span>
                 </div>
+              </div>
+
+              {/* Level Counter */}
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary/10 text-primary font-bold text-sm shadow-sm border border-primary/20">
+                <span className="text-[10px] uppercase tracking-wider opacity-80">Lvl</span>
+                <span>{calculateUserLevel(userData?.allTimeSeconds, userData?.allTimeSessions)}</span>
               </div>
 
               {/* Streak Counter */}

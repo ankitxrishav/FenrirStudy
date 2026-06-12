@@ -61,6 +61,7 @@ The heart of FenrirStudy is a custom-built, dual-mode timer engine.
 The dashboard provides actionable intelligence rather than just raw data. It processes session history in real-time to generate:
 - **Daily Study Pulse**: sophisticated average calculation (`Total Time / Active Days`) for weekly and monthly windows, filtering out inactive days to show true capacity.
 - **Temporal Heatmaps**: Visualizes peak productivity hours (0-24h) to identify "Biological Prime Time".
+- **RPG Leveling System**: Quantifies long-term dedication by calculating XP based on daily study hours and total sessions, converting it into a progressively difficult Level to keep users motivated.
 - **Subject Stability**: Tracks consistency % per subject, identifying neglected areas before they become critical.
 - **Momentum**: Calculates week-over-week velocity to visualize progress trends.
 

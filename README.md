@@ -11,10 +11,13 @@
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
 # Update v8.1 🐺
-<h3> Pihu on Login & Dashboard, Daily Stats, and Bug Fixes </h3>
+<h3> RPG Leveling, Subject Breakdowns & Pihu Expansion </h3>
 
+- **RPG Leveling System**: Earn XP and level up based on your daily study hours and total sessions. The leveling curve becomes progressively harder to encourage long-term consistency. Levels are displayed on the Dashboard and Room banners.
+- **Dynamic Milestones**: Streak goals and target milestones scale automatically alongside your RPG level.
+- **Live Room Subject Breakdowns**: The Member Stats Overview now displays a color-coded breakdown of every subject a user has studied today, including live time tracking for their currently active subject.
+- **Cascading Deletions**: Deleting a subject now safely and automatically removes all associated study sessions to keep analytics accurate.
 - **Pihu The Mascot Expansion**: Pihu now greets you on the Login page and hangs out on the Dashboard.
-- **Daily Member Stats**: Room members now show their today's session count and total study hours directly on their timer cards.
 - **Shared Room Goals**: Any member in a room can now check off shared goals, fostering a collaborative study environment.
 - **Robust Presence Sync**: Fixed issues where members would become "zombies" or get missing permissions errors after deleting or leaving rooms.
 

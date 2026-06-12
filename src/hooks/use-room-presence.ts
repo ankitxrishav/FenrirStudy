@@ -68,6 +68,24 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
         }
       }
 
+      // Map todaySubjectBreakdown
+      const mappedBreakdown = [];
+      if (currentUserData?.todaySubjectBreakdown) {
+          for (const [subjId, secs] of Object.entries(currentUserData.todaySubjectBreakdown)) {
+              const s = currentSubjects.find(sub => sub.id === subjId);
+              if (s && secs > 0) {
+                  mappedBreakdown.push({
+                      id: subjId,
+                      name: s.name,
+                      color: s.color,
+                      seconds: secs
+                  });
+              }
+          }
+          // Sort by seconds descending
+          mappedBreakdown.sort((a, b) => b.seconds - a.seconds);
+      }
+
       const update = {
         lastSeen: new Date().toISOString(),
         timerStatus,
@@ -85,6 +103,10 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
         weeklySeconds: currentUserData?.weeklySeconds ?? 0,
         monthlySessions: currentUserData?.monthlySessions ?? 0,
         monthlySeconds: currentUserData?.monthlySeconds ?? 0,
+        allTimeSessions: currentUserData?.allTimeSessions ?? 0,
+        allTimeSeconds: currentUserData?.allTimeSeconds ?? 0,
+        currentSubjectTodaySeconds: currentUserData?.currentSubjectTodaySeconds ?? 0,
+        todaySubjectBreakdown: mappedBreakdown,
       };
 
       try {

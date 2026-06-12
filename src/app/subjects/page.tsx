@@ -10,7 +10,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Subject, Session } from "@/lib/definitions";
 import { useUser, useCollection, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
-import { collection, query, where, doc, updateDoc, serverTimestamp, addDoc } from "firebase/firestore";
+import { collection, query, where, doc, updateDoc, serverTimestamp, addDoc, deleteDoc, getDocs } from "firebase/firestore";
 import { AddSubjectDialog } from "@/components/app/timer/add-subject-dialog";
 import { EditSubjectDialog } from "@/components/app/timer/edit-subject-dialog";
 import LoadingScreen from "@/components/app/loading-screen";
@@ -97,6 +97,26 @@ export default function SubjectsPage() {
         });
     };
 
+    const handleDeleteSubject = async (subject: Subject) => {
+        if (!firestore) return;
+        if (!confirm("Are you sure you want to permanently delete this subject and all of its associated study sessions? This will affect your dashboard stats.")) return;
+        
+        try {
+            // First, delete all sessions for this subject
+            const sessionsQ = query(collection(firestore, "sessions"), where("subjectId", "==", subject.id));
+            const snapshot = await getDocs(sessionsQ);
+            
+            const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(firestore, "sessions", docSnap.id)));
+            await Promise.all(deletePromises);
+
+            // Then, delete the subject itself
+            const subjectRef = doc(firestore, "subjects", subject.id);
+            await deleteDoc(subjectRef);
+        } catch (e) {
+            console.error("Error deleting subject: ", e);
+        }
+    };
+
     if (userLoading || subjectsLoading || !user) {
         return <LoadingScreen />;
     }
@@ -144,7 +164,7 @@ export default function SubjectsPage() {
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground relative z-10">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
@@ -156,6 +176,10 @@ export default function SubjectsPage() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => toggleArchive(subject)} className="gap-2 text-amber-500">
                                                     <Archive className="h-4 w-4" /> Archive Subject
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-white/5" />
+                                                <DropdownMenuItem onClick={() => handleDeleteSubject(subject)} className="gap-2 text-red-500">
+                                                    <Trash2 className="h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -211,9 +235,14 @@ export default function SubjectsPage() {
                                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
                                         <span className="text-sm font-medium">{subject.name}</span>
                                     </div>
-                                    <Button variant="ghost" size="sm" onClick={() => toggleArchive(subject)} className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider">
-                                        UNARCHIVE
-                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="sm" onClick={() => toggleArchive(subject)} className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider">
+                                            UNARCHIVE
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteSubject(subject)} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}

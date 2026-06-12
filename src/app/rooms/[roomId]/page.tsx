@@ -37,6 +37,7 @@ import { RoomStreakBanner } from "@/components/app/rooms/room-streak-banner";
 import { RoomSettingsDialog } from "@/components/app/rooms/room-settings-dialog";
 import { PihuCat } from "@/components/app/rooms/pihu-cat";
 import { RoomErrorBoundary } from "@/components/app/rooms/room-error-boundary";
+import { RoomMemberStats } from "@/components/app/rooms/room-member-stats";
 import { useToast } from "@/hooks/use-toast";
 import { Subject, RoomMember } from "@/lib/definitions";
 import { collection, query, where } from "firebase/firestore";
@@ -50,6 +51,7 @@ type PanelId = "members" | "leaderboard" | "challenges" | "analytics" | "goals";
 
 const NAV_ITEMS: { id: PanelId; label: string; icon: React.ElementType }[] = [
   { id: "members", label: "Members", icon: Users },
+  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
   { id: "challenges", label: "Challenges", icon: Zap },
   { id: "analytics", label: "Analytics", icon: BarChart2 },
   { id: "goals", label: "Goals", icon: Target },
@@ -68,6 +70,7 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [leavingRoom, setLeavingRoom] = useState(false);
   const [selectedMember, setSelectedMember] = useState<RoomMember | null>(null);
   const [showChat, setShowChat] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<"chat" | "focus">("chat");
 
   const subjectsQuery = useMemo(
     () =>
@@ -91,6 +94,11 @@ export default function RoomPage({ params }: RoomPageProps) {
     () => members.filter(m => m.status !== "offline").length,
     [members]
   );
+
+  const totalStudyMinutesToday = useMemo(() => {
+    const seconds = members.reduce((acc, m) => acc + (m.todaySeconds || 0), 0);
+    return Math.floor(seconds / 60);
+  }, [members]);
 
   const handleCopyCode = () => {
     if (!room) return;
@@ -183,23 +191,23 @@ export default function RoomPage({ params }: RoomPageProps) {
         </div>
 
         {/* ── Streak Banner ── */}
-        <RoomStreakBanner room={room} />
-
-        {/* ── Live Timer Grid (always visible, the hero) ── */}
-        <RoomErrorBoundary fallbackLabel="Could not load live timers.">
-          <MemberTimerGrid
-            members={members}
-            currentUserId={user.uid}
-            roomId={roomId}
-            onMemberClick={setSelectedMember}
-          />
-        </RoomErrorBoundary>
+        <RoomStreakBanner room={room} totalStudyMinutesToday={totalStudyMinutesToday} />
 
         {/* ── Main layout: panel + sidebar ── */}
         <div className="flex flex-col lg:flex-row gap-5">
 
           {/* Left: Glassmorphic nav + panel */}
           <div className="flex-1 min-w-0 space-y-4">
+            
+            {/* ── Live Timer Grid ── */}
+            <RoomErrorBoundary fallbackLabel="Could not load live timers.">
+              <MemberTimerGrid
+                members={members}
+                currentUserId={user.uid}
+                roomId={roomId}
+                onMemberClick={setSelectedMember}
+              />
+            </RoomErrorBoundary>
 
             {/* Glassmorphic pill nav */}
             <div id="room-pill-nav" className="glass border border-white/10 rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
@@ -238,7 +246,11 @@ export default function RoomPage({ params }: RoomPageProps) {
                     <MemberGrid roomId={roomId} members={members} />
                   </RoomErrorBoundary>
                 )}
-
+                {activePanel === "leaderboard" && (
+                  <RoomErrorBoundary fallbackLabel="Could not load leaderboard.">
+                    <RoomLeaderboard members={members} />
+                  </RoomErrorBoundary>
+                )}
                 {activePanel === "challenges" && (
                   <RoomErrorBoundary fallbackLabel="Could not load challenges.">
                     <RoomChallenges
@@ -273,28 +285,60 @@ export default function RoomPage({ params }: RoomPageProps) {
                 animate={{ opacity: 1, x: 0, width: "auto" }}
                 exit={{ opacity: 0, x: 20, width: 0 }}
                 transition={{ duration: 0.25 }}
-                className="w-full lg:w-80 shrink-0 space-y-4 overflow-hidden"
+                className="w-full lg:w-80 shrink-0 space-y-4 overflow-hidden flex flex-col h-[calc(100vh-140px)]"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                    <Timer className="h-3 w-3" /> Focus Timer
-                  </span>
+                <div className="flex bg-white/5 p-1 rounded-xl gap-1 shrink-0">
+                  <button
+                    onClick={() => setSidebarTab("chat")}
+                    className={cn(
+                      "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
+                      sidebarTab === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5"
+                    )}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> Chat
+                  </button>
+                  <button
+                    onClick={() => setSidebarTab("focus")}
+                    className={cn(
+                      "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
+                      sidebarTab === "focus" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5"
+                    )}
+                  >
+                    <Timer className="h-3.5 w-3.5" /> Focus Timer
+                  </button>
                 </div>
-                <RoomErrorBoundary fallbackLabel="Could not load focus timer.">
-                  <SharedFocusPanel roomId={roomId} room={room} />
-                </RoomErrorBoundary>
-                <RoomErrorBoundary fallbackLabel="Could not load chat.">
-                  <RoomChat roomId={roomId} messages={messages} />
-                </RoomErrorBoundary>
+                
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={sidebarTab}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="h-full"
+                    >
+                      {sidebarTab === "focus" ? (
+                        <RoomErrorBoundary fallbackLabel="Could not load focus timer.">
+                          <SharedFocusPanel roomId={roomId} room={room} />
+                        </RoomErrorBoundary>
+                      ) : (
+                        <RoomErrorBoundary fallbackLabel="Could not load chat.">
+                          <RoomChat roomId={roomId} messages={messages} />
+                        </RoomErrorBoundary>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
 
-      {/* ── Separate Leaderboard Section ── */}
+      {/* ── Separate Member Stats Section ── */}
       <div className="w-full max-w-6xl mx-auto mt-6">
-        <RoomLeaderboard members={members} />
+        <RoomMemberStats members={members} />
       </div>
 
       {/* Finish effect overlay */}

@@ -59,6 +59,10 @@ export type User = {
   weeklySessions?: number;
   monthlySeconds?: number;
   monthlySessions?: number;
+  allTimeSeconds?: number;
+  allTimeSessions?: number;
+  currentSubjectTodaySeconds?: number;
+  todaySubjectBreakdown?: Record<string, number>; // subjectId -> seconds
 };
 
 // Represents the state of a user's timer, stored in Firestore
@@ -174,6 +178,10 @@ export type RoomMember = {
   weeklySeconds?: number;
   monthlySessions?: number;
   monthlySeconds?: number;
+  allTimeSessions?: number;
+  allTimeSeconds?: number;
+  currentSubjectTodaySeconds?: number;
+  todaySubjectBreakdown?: { id: string; name: string; color: string; seconds: number }[];
 };
 
 export type RoomMessage = {

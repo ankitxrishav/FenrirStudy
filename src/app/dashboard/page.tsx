@@ -34,6 +34,7 @@ import LoadingScreen from "@/components/app/loading-screen";
 import { cn } from "@/lib/utils";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { motion, AnimatePresence } from "framer-motion";
+import { calculateUserLevel } from "@/lib/level";
 import { useHabits } from "@/hooks/use-habits";
 import { HabitAnalytics } from "@/components/app/dashboard/habit-analytics";
 import { PihuCat } from "@/components/app/rooms/pihu-cat";
@@ -90,6 +91,10 @@ export default function DashboardPage() {
 
     const stats = useDashboardStats(allSessions, allSubjects);
 
+    const allTimeSeconds = allSessions?.reduce((acc, s) => acc + s.duration, 0) || 0;
+    const allTimeSessions = allSessions?.length || 0;
+    const userLevel = calculateUserLevel(allTimeSeconds, allTimeSessions);
+
     // Fetch habits for analytics
     const { analytics: habitAnalytics } = useHabits(new Date());
 
@@ -113,10 +118,16 @@ export default function DashboardPage() {
                                 <Activity className="h-5 w-5" />
                                 <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Analytics</span>
                             </div>
-                            <h1 className="text-6xl font-black tracking-tighter text-gradient">
-                                Dashboard
-                            </h1>
-                            <p className="text-muted-foreground text-sm mt-1 max-w-sm">Clear analysis of your study habits and focus performance.</p>
+                            <div className="flex items-center gap-4">
+                                <h1 className="text-6xl font-black tracking-tighter text-gradient">
+                                    Dashboard
+                                </h1>
+                                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold shadow-sm border border-primary/20 flex flex-col items-center justify-center translate-y-1">
+                                    <span className="text-[10px] uppercase tracking-wider opacity-80 leading-none mb-1">Level</span>
+                                    <span className="text-2xl leading-none">{userLevel}</span>
+                                </div>
+                            </div>
+                            <p className="text-muted-foreground text-sm mt-3 max-w-sm">Clear analysis of your study habits and focus performance.</p>
                         </div>
                     </div>
 

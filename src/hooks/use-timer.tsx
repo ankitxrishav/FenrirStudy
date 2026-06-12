@@ -74,6 +74,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             today: { seconds: 0, sessions: 0 },
             weekly: { seconds: 0, sessions: 0 },
             monthly: { seconds: 0, sessions: 0 },
+            allTime: { seconds: 0, sessions: 0 },
+            currentSubjectTodaySeconds: 0,
+            todaySubjectBreakdown: {} as Record<string, number>,
         };
         if (!firestore || !user) return defaultStats;
         
@@ -93,15 +96,27 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             const snap = await getDocs(q);
             
             const stats = { ...defaultStats };
+            // Initialize empty breakdown object explicitly to prevent undefined
+            stats.todaySubjectBreakdown = {};
             
             snap.forEach(d => {
                 const data = d.data();
                 if (!data.startTime) return;
                 const dDate = new Date(data.startTime);
                 
+                // All-time stats
+                stats.allTime.seconds += data.duration || 0;
+                stats.allTime.sessions += 1;
+
                 if (dDate >= todayStart) {
                     stats.today.seconds += data.duration || 0;
                     stats.today.sessions += 1;
+                    if (selectedSubjectId && data.subjectId === selectedSubjectId) {
+                        stats.currentSubjectTodaySeconds += data.duration || 0;
+                    }
+                    if (data.subjectId) {
+                        stats.todaySubjectBreakdown[data.subjectId] = (stats.todaySubjectBreakdown[data.subjectId] || 0) + (data.duration || 0);
+                    }
                 }
                 if (dDate >= weekStart) {
                     stats.weekly.seconds += data.duration || 0;
@@ -117,7 +132,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             console.error("Error fetching study stats:", e);
             return defaultStats;
         }
-    }, [firestore, user]);
+    }, [firestore, user, selectedSubjectId]);
 
     useEffect(() => {
         if (user && firestore) {
@@ -131,10 +146,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                     weeklySessions: stats.weekly.sessions,
                     monthlySeconds: stats.monthly.seconds,
                     monthlySessions: stats.monthly.sessions,
+                    allTimeSeconds: stats.allTime.seconds,
+                    allTimeSessions: stats.allTime.sessions,
+                    currentSubjectTodaySeconds: stats.currentSubjectTodaySeconds,
+                    todaySubjectBreakdown: stats.todaySubjectBreakdown,
                 }, { merge: true }).catch(() => {});
             });
         }
-    }, [user, firestore, getPeriodicStats]);
+    }, [user, firestore, getPeriodicStats, selectedSubjectId]);
 
     useEffect(() => {
         const savedFace = localStorage.getItem('timerFace') as TimerFaceId;

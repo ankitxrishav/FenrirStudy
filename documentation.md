@@ -1,6 +1,6 @@
-# FenrirStudy System Documentation v8.0
+# FenrirStudy System Documentation v8.1
 
-![Status](https://img.shields.io/badge/System-Operational-emerald?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-8.0.0-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/System-Operational-emerald?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-8.1.0-blue?style=for-the-badge)
 
 ## 1. Executive Summary
 **FenrirStudy** is not merely a time-tracking application; it is a **Cognitive Flow Enhancement System** designed for high-performance academic and professional environments. It integrates precise time-management tools with a deep analytical engine to quantify focus, track behavioral patterns, and optimize study rituals. 

@@ -162,6 +162,8 @@ export type RoomMember = {
   accumulatedTime?: number;      // seconds elapsed before current phase
   initialDuration?: number;      // seconds, for pomodoro mode
   finishedAt?: string | null;    // ISO string — set for ~4s when timer just completed
+  todaySessions?: number;
+  todaySeconds?: number;
 };
 
 export type RoomMessage = {

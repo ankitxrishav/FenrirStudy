@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { useTimer } from '@/hooks/use-timer';
-import { useUser, useFirestore } from '@/firebase';
-import { Subject } from '@/lib/definitions';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { Subject, User } from '@/lib/definitions';
 
 /**
  * useRoomPresence — runs on the room page.
@@ -20,6 +20,11 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
   const firestore = useFirestore();
   const { mode, isActive, isPaused, isIdle, selectedSubjectId } = useTimer();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const userDocRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData } = useDoc<User>(userDocRef);
+  const userDataRef = useRef<User | null>(null);
+  userDataRef.current = userData;
 
   // Raw timerState from Firestore (needed for startedAt / accumulatedTime / initialDuration)
   // We subscribe via onSnapshot so we always have the freshest server-timestamp data.
@@ -46,6 +51,7 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
     const writePresence = async () => {
       const ts = timerStateRef.current;
       const currentSubjects = subjectsRef.current;
+      const currentUserData = userDataRef.current;
 
       // Look up current subject name + color from subjects array
       const subject = currentSubjects.find(s => s.id === selectedSubjectId) ?? null;
@@ -73,10 +79,12 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
         accumulatedTime: ts?.accumulatedTime ?? 0,
         initialDuration: ts?.initialDuration ?? 1500,
         finishedAt: null,
+        todaySessions: currentUserData?.todaySessions ?? 0,
+        todaySeconds: currentUserData?.todaySeconds ?? 0,
       };
 
       try {
-        await setDoc(memberRef, update, { merge: true });
+        await updateDoc(memberRef, update);
       } catch {
         // Silently ignore — user may have left the room
       }
@@ -91,10 +99,10 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       // On unmount: mark as stopped + update lastSeen
-      setDoc(memberRef, {
+      updateDoc(memberRef, {
         timerStatus: 'stopped',
         lastSeen: new Date().toISOString(),
-      }, { merge: true }).catch(() => {});
+      }).catch(() => {});
     };
   }, [
     user,
@@ -127,11 +135,11 @@ export function useFinishBroadcast(roomId: string) {
     // Timer just completed: was active, now idle (not paused, not running)
     if (prevIsActive.current && isIdle) {
       const memberRef = doc(firestore, 'rooms', roomId, 'members', user.uid);
-      setDoc(memberRef, { finishedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      updateDoc(memberRef, { finishedAt: new Date().toISOString() }).catch(() => {});
 
       // Clear finishedAt after 4 seconds so it doesn't re-trigger
       const t = setTimeout(() => {
-        setDoc(memberRef, { finishedAt: null }, { merge: true }).catch(() => {});
+        updateDoc(memberRef, { finishedAt: null }).catch(() => {});
       }, 4000);
       return () => clearTimeout(t);
     }

@@ -313,19 +313,33 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                     const snap = await getDocs(q);
 
                     let totalSecondsToday = 0;
+                    let totalSessionsToday = 0;
                     snap.forEach(d => {
                         const data = d.data();
-                        if (new Date(data.startTime) >= todayStart) totalSecondsToday += data.duration;
+                        if (new Date(data.startTime) >= todayStart) {
+                            totalSecondsToday += data.duration;
+                            totalSessionsToday += 1;
+                        }
                     });
 
-                    if (totalSecondsToday >= targetHours * 3600) {
-                        const today = format(new Date(), 'yyyy-MM-dd');
-                        const lastUpdate = userData?.lastStreakUpdate;
-                        if (lastUpdate !== today && userRef) {
-                            let newStreak = lastUpdate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? (userData?.streak || 0) + 1 : 1;
-                            await updateDoc(userRef, { streak: newStreak, lastStreakUpdate: today });
-                            toast({ title: "Streak Updated!", description: `🔥 ${newStreak} day streak!` });
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    if (userRef) {
+                        const updates: any = {
+                            todaySessions: totalSessionsToday,
+                            todaySeconds: totalSecondsToday,
+                            todayStatsDate: today,
+                        };
+
+                        if (totalSecondsToday >= targetHours * 3600) {
+                            const lastUpdate = userData?.lastStreakUpdate;
+                            if (lastUpdate !== today) {
+                                let newStreak = lastUpdate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? (userData?.streak || 0) + 1 : 1;
+                                updates.streak = newStreak;
+                                updates.lastStreakUpdate = today;
+                                toast({ title: "Streak Updated!", description: `🔥 ${newStreak} day streak!` });
+                            }
                         }
+                        await updateDoc(userRef, updates);
                     }
                 }
             }

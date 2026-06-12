@@ -410,7 +410,7 @@ const PIHU_POOL = [
   "A cozy meow of approval for your work! 🐾"
 ];
 
-export function PihuCat() {
+export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { isActive: timerActive } = useTimer();
@@ -614,7 +614,17 @@ export function PihuCat() {
     });
 
     return () => unsubscribe();
-  }, [firestore, user]);
+  }, [firestore, user, greetingMode]);
+
+  useEffect(() => {
+    if (greetingMode) {
+      setTimeout(() => {
+        setSpeech("Welcome to FenrirStudy! Please sign in to start your cozy session. 🐾");
+        spawnParticles("✨", 8);
+        playMeowSound(isMutedRef.current);
+      }, 1000);
+    }
+  }, [greetingMode]);
 
   // Audio synthesis loop
   useEffect(() => {
@@ -1376,30 +1386,7 @@ export function PihuCat() {
     const nextMsg = pool.pop();
     if (nextMsg) {
       setDialoguePool(pool);
-      
-      let formattedMsg = nextMsg;
-      // Clean up existing Pihu greeting prefixes
-      if (formattedMsg.startsWith("Hi! I'm Pihu")) {
-        formattedMsg = formattedMsg.substring("Hi! I'm Pihu".length).trim();
-      } else if (formattedMsg.startsWith("I am Pihu")) {
-        formattedMsg = formattedMsg.substring("I am Pihu".length).trim();
-      }
-      
-      // Clean leading punctuation and standard "and"
-      formattedMsg = formattedMsg.replace(/^[,;:\-\s]+/, "").trim();
-      if (formattedMsg.toLowerCase().startsWith("and ")) {
-        formattedMsg = formattedMsg.substring(4).trim();
-      }
-      
-      if (formattedMsg.length === 0 || formattedMsg === "🐱") {
-        formattedMsg = "I am Pihu and I'm happy to see you! 🐱";
-      } else {
-        const firstChar = formattedMsg.charAt(0).toLowerCase();
-        const rest = formattedMsg.slice(1);
-        formattedMsg = `I am Pihu and ${firstChar}${rest}`;
-      }
-      
-      setSpeech(formattedMsg);
+      setSpeech(nextMsg);
       if (speechTimer.current) clearTimeout(speechTimer.current);
       speechTimer.current = setTimeout(() => setSpeech(null), 4000);
     }
@@ -1577,27 +1564,8 @@ export function PihuCat() {
 
   // Dynamic Glassmorphic Menu position calculator
   const getMenuStyle = () => {
-    const p = physics.current;
-    if (typeof window === "undefined") return {};
-    
     const isMobile = window.innerWidth < 768;
     const menuWidth = isMobile ? window.innerWidth - 32 : 320;
-    const menuHeight = 400; // estimated maximum height of the menu
-    
-    // Position menu above the cat by default
-    let top = p.y - menuHeight - 15;
-    let left = p.x + CAT_WIDTH / 2 - menuWidth / 2;
-    
-    // If it goes off the top of the viewport, place it below the cat instead
-    if (top < 10) {
-      top = p.y + CAT_HEIGHT + 15;
-    }
-    
-    // Clamp horizontally to screen bounds with 16px margins
-    left = Math.max(16, Math.min(window.innerWidth - menuWidth - 16, left));
-    
-    // Clamp vertically to screen bounds with 16px margins
-    top = Math.max(16, Math.min(window.innerHeight - menuHeight - 16, top));
     
     return {
       position: "fixed" as const,

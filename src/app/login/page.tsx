@@ -8,6 +8,7 @@ import { useAuth } from "@/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
+import { PihuCat } from "@/components/app/rooms/pihu-cat";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -48,16 +49,17 @@ export default function LoginPage() {
 
     return (
         <div className="flex h-full items-center justify-center p-4">
-            <Card className="w-full max-w-sm">
+            <PihuCat greetingMode={true} />
+            <Card className="w-full max-w-sm relative z-10 bg-black/40 backdrop-blur-md border-white/10 text-white">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">Welcome Back!</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back!</CardTitle>
+                    <CardDescription className="text-muted-foreground/80">
                         Sign in to access your dashboard and track your study progress.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={!auth}>
+                        <Button variant="outline" className="w-full bg-white/5 border-white/10 hover:bg-white/10" onClick={handleGoogleSignIn} disabled={!auth}>
                            {auth ? <FcGoogle className="mr-2 h-4 w-4" /> : <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent border-primary"></div>}
                             Sign in with Google
                         </Button>

@@ -75,7 +75,7 @@ export function RoomGoalBoard({ roomId, roomGoals }: RoomGoalBoardProps) {
   };
 
   const handleToggleComplete = async (goal: RoomGoal) => {
-    if (!firestore || !user || goal.userId !== user.uid) return;
+    if (!firestore || !user) return;
     await updateDoc(doc(firestore, "rooms", roomId, "goals", goal.id), {
       completed: !goal.completed,
     });
@@ -159,7 +159,6 @@ export function RoomGoalBoard({ roomId, roomGoals }: RoomGoalBoardProps) {
                   <p className="text-xs text-muted-foreground">{goal.displayName}</p>
                   <p className={cn("text-sm", goal.completed && "line-through")}>{goal.text}</p>
                 </div>
-                {goal.userId === user?.uid && (
                   <button
                     onClick={() => handleToggleComplete(goal)}
                     className={cn(
@@ -171,7 +170,6 @@ export function RoomGoalBoard({ roomId, roomGoals }: RoomGoalBoardProps) {
                   >
                     {goal.completed && <Check className="h-3 w-3" />}
                   </button>
-                )}
               </div>
             ))}
           </div>

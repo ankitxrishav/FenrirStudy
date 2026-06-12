@@ -142,6 +142,14 @@ export function MemberTimerCard({ member, isCurrentUser, onSyncRequest, onMember
         </div>
       )}
 
+      {/* Daily Stats */}
+      {(member.todaySessions !== undefined || member.todaySeconds !== undefined) && (
+        <div className="mt-2 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 border-t border-white/5 pt-2 w-full justify-between">
+          <span>{member.todaySessions || 0} Sessions</span>
+          <span>{Math.round((member.todaySeconds || 0) / 3600 * 10) / 10}h Today</span>
+        </div>
+      )}
+
       {/* Sync button — only shown when member is running AND not current user */}
       {timerStatus === 'running' && !isCurrentUser && (
         <Button

@@ -10,6 +10,14 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Database-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
+# Update v8.1 🐺
+<h3> Pihu on Login & Dashboard, Daily Stats, and Bug Fixes </h3>
+
+- **Pihu The Mascot Expansion**: Pihu now greets you on the Login page and hangs out on the Dashboard.
+- **Daily Member Stats**: Room members now show their today's session count and total study hours directly on their timer cards.
+- **Shared Room Goals**: Any member in a room can now check off shared goals, fostering a collaborative study environment.
+- **Robust Presence Sync**: Fixed issues where members would become "zombies" or get missing permissions errors after deleting or leaving rooms.
+
 # Update v8.0 🐺
 <h3> Co-Study Rooms & Live Accountability </h3>
 
@@ -19,8 +27,6 @@
 - **Real-Time Presence Engine**: A robust backend architecture that tracks live status ('studying', 'idle', 'offline') across the room.
 - **Accountability Pairs**: Form accountability pairs with other members and send real-time emoji reactions to boost morale.
 - **Secure Room Management**: Owners have full control to manage settings, moderate members, and seamlessly delete rooms.
-
-# Update v7.o 🐺
 <h3> Habit Intelligence & Unified Dashboard </h3>
 
 - **Unified Dashboard Migration**: Successfully migrated habit analytics into the main Dashboard. Switch seamlessly between study performance and habit consistency with a tabbed interface.

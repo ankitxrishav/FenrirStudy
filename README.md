@@ -10,6 +10,9 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Database-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-00A0DF?style=for-the-badge)](LICENSE)
 
+<a href="https://www.producthunt.com/products/fenrirstudy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-fenrirstudy" target="_blank" rel="noopener noreferrer"><img alt="fenrirstudy - Study, track, analyze, and improve your focus | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1173505&amp;theme=dark&amp;t=1781789932414"></a>
+
+
 # Update v8.1 🐺
 <h3> RPG Leveling, Subject Breakdowns & Pihu Expansion </h3>
 

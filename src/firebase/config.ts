@@ -2,6 +2,7 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // Configuration is now read from environment variables for security.
 const firebaseConfig = {
@@ -18,6 +19,7 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
+let storage: FirebaseStorage;
 
 function initializeFirebase() {
     if (typeof window !== 'undefined') {
@@ -26,6 +28,7 @@ function initializeFirebase() {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 firestore = getFirestore(app);
+                storage = getStorage(app);
             } catch (e) {
                 console.error("Firebase initialization error", e);
             }
@@ -33,9 +36,10 @@ function initializeFirebase() {
             app = getApp();
             auth = getAuth(app);
             firestore = getFirestore(app);
+            storage = getStorage(app);
         }
     }
-    return { app, auth, firestore };
+    return { app, auth, firestore, storage };
 }
 
 export { initializeFirebase };

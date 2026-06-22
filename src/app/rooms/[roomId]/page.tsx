@@ -324,7 +324,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                         </RoomErrorBoundary>
                       ) : (
                         <RoomErrorBoundary fallbackLabel="Could not load chat.">
-                          <RoomChat roomId={roomId} messages={messages} />
+                          <RoomChat roomId={roomId} messages={messages} roomOwnerId={room.ownerId} />
                         </RoomErrorBoundary>
                       )}
                     </motion.div>

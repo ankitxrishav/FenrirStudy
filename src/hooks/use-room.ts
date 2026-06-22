@@ -350,9 +350,17 @@ export async function sendMessage(
   firestore: Firestore,
   user: RoomUserLike,
   roomId: string,
-  text: string
+  text: string,
+  imageUrl?: string,
+  replyTo?: {
+    id: string;
+    displayName: string;
+    text?: string;
+    imageUrl?: string;
+  },
+  cloudinaryPublicId?: string
 ): Promise<void> {
-  await addDoc(collection(firestore, 'rooms', roomId, 'messages'), {
+  const payload: any = {
     roomId,
     userId: user.uid,
     displayName: user.displayName ?? '',
@@ -360,7 +368,13 @@ export async function sendMessage(
     text,
     createdAt: new Date().toISOString(),
     type: 'message',
-  });
+  };
+  
+  if (imageUrl) payload.imageUrl = imageUrl;
+  if (replyTo) payload.replyTo = replyTo;
+  if (cloudinaryPublicId) payload.cloudinaryPublicId = cloudinaryPublicId;
+
+  await addDoc(collection(firestore, 'rooms', roomId, 'messages'), payload);
 }
 
 export async function checkAndUpdateCollectiveStreak(

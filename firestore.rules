@@ -144,7 +144,18 @@ service cloud.firestore {
       allow read: if isRoomMember(roomId);
       allow create: if isRoomMember(roomId)
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+
+      // Any room member can add/remove emoji reactions
+      allow update: if isRoomMember(roomId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']);
+
+      // Sender or room owner can manually delete their image (only image fields change)
+      allow update: if isRoomMember(roomId)
+        && (resource.data.userId == request.auth.uid || isRoomOwner(roomId))
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['imageUrl', 'imageDeleted', 'cloudinaryPublicId']);
+
+      allow delete: if false;
     }
 
     match /rooms/{roomId}/challenges/{challengeId} {

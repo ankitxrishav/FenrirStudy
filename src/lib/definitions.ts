@@ -193,6 +193,16 @@ export type RoomMessage = {
   text: string;
   createdAt: string;      // ISO string
   type: 'message' | 'system';  // system = "X joined the room"
+  imageUrl?: string;
+  imageDeleted?: boolean;
+  cloudinaryPublicId?: string;
+  reactions?: Record<string, string[]>; // emoji → array of userIds who reacted
+  replyTo?: {
+    id: string;
+    displayName: string;
+    text?: string;
+    imageUrl?: string;
+  };
 };
 
 export type RoomChallenge = {

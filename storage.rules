@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /rooms/{roomId}/photos/{messageId} {
+      // Any authenticated user can read photos
+      allow read: if request.auth != null;
+      // Only authenticated users can upload photos, max size 10MB, must be image
+      allow create: if request.auth != null
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      // Anyone authenticated can delete photos (used for our decentralized 24h cleanup)
+      allow delete: if request.auth != null;
+      // No updates allowed
+      allow update: if false;
+    }
+  }
+}

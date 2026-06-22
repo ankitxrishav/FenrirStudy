@@ -68,6 +68,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
     const [activeFace, setActiveFace] = useState<TimerFaceId>('digital');
     const todayAccumulatedSecondsRef = useRef<number>(0);
+    const todaySubjectAccumulatedSecondsRef = useRef<number>(0);
 
     const getPeriodicStats = useCallback(async () => {
         const defaultStats = {
@@ -138,6 +139,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (user && firestore) {
             getPeriodicStats().then(stats => {
                 todayAccumulatedSecondsRef.current = stats.today.seconds;
+                todaySubjectAccumulatedSecondsRef.current = stats.currentSubjectTodaySeconds;
                 
                 setDoc(doc(firestore, 'users', user.uid), {
                     todaySeconds: stats.today.seconds,
@@ -210,12 +212,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             const totalElapsedTime = timerState.accumulatedTime + elapsedSinceStart;
 
             // Enforce limits:
-            // 1. Single subject session limit (8 hours = 28800 seconds)
-            const maxSessionTime = 28800;
+            // 1. Single subject daily limit (6 hours = 21600 seconds)
+            const remainingSubjectTime = Math.max(0, 21600 - todaySubjectAccumulatedSecondsRef.current);
 
             // 2. Daily limit (22 hours = 79200 seconds)
             const remainingDailyTime = Math.max(0, 79200 - todayAccumulatedSecondsRef.current);
-            const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
+            const effectiveLimit = Math.min(remainingSubjectTime, remainingDailyTime);
 
             if (totalElapsedTime >= effectiveLimit) {
                 setDisplayTime(timerState.mode === 'pomodoro' ? Math.max(0, timerState.initialDuration - effectiveLimit) : effectiveLimit);
@@ -261,6 +263,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         // Fetch and cache today's accumulated study seconds
         const stats = await getPeriodicStats();
         todayAccumulatedSecondsRef.current = stats.today.seconds;
+        todaySubjectAccumulatedSecondsRef.current = stats.currentSubjectTodaySeconds;
 
         let accumulatedTime = 0;
         let sessionStartTime = serverTimestamp();
@@ -326,10 +329,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Enforce capping limits when saving the session
-            const maxSessionTime = 28800; // 8 hours
             const stats = await getPeriodicStats();
+            const remainingSubjectTime = Math.max(0, 21600 - stats.currentSubjectTodaySeconds);
             const remainingDailyTime = Math.max(0, 79200 - stats.today.seconds);
-            const effectiveLimit = Math.min(maxSessionTime, remainingDailyTime);
+            const effectiveLimit = Math.min(remainingSubjectTime, remainingDailyTime);
 
             let finalDurationSeconds = Math.round(finalElapsedTime);
             if (finalDurationSeconds > effectiveLimit) {

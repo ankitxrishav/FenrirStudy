@@ -7,27 +7,21 @@ import { usePresenceSync } from "@/hooks/use-presence-sync";
 import { useRoomPresence, useFinishBroadcast } from "@/hooks/use-room-presence";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { CHAT_THEMES, ChatThemeId } from "@/hooks/use-room-theme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Copy,
-  Settings,
-  LogOut,
-  Users,
-  Trophy,
-  Zap,
-  BarChart2,
-  Target,
-  MessageCircle,
-  Timer,
+  Copy, Settings, LogOut, Users, Trophy,
+  Zap, BarChart2, Target, MessageCircle, Timer,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import LoadingScreen from "@/components/app/loading-screen";
 import { MemberTimerGrid } from "@/components/app/rooms/member-timer-grid";
 import { MemberGrid } from "@/components/app/rooms/member-grid";
 import { MemberProfileDrawer } from "@/components/app/rooms/member-profile-drawer";
 import { RoomFinishFx } from "@/components/app/rooms/room-finish-fx";
-import { RoomChat } from "@/components/app/rooms/room-chat";
+import { StandaloneChat } from "@/components/app/rooms/standalone-chat";
 import { SharedFocusPanel } from "@/components/app/rooms/shared-focus-panel";
 import { RoomLeaderboard } from "@/components/app/rooms/room-leaderboard";
 import { RoomChallenges } from "@/components/app/rooms/room-challenges";
@@ -38,6 +32,7 @@ import { RoomSettingsDialog } from "@/components/app/rooms/room-settings-dialog"
 import { PihuCat } from "@/components/app/rooms/pihu-cat";
 import { RoomErrorBoundary } from "@/components/app/rooms/room-error-boundary";
 import { RoomMemberStats } from "@/components/app/rooms/room-member-stats";
+import { RoomPersonalTimer } from "@/components/app/rooms/room-personal-timer";
 import { useToast } from "@/hooks/use-toast";
 import { Subject, RoomMember } from "@/lib/definitions";
 import { collection, query, where } from "firebase/firestore";
@@ -50,11 +45,11 @@ interface RoomPageProps {
 type PanelId = "members" | "leaderboard" | "challenges" | "analytics" | "goals";
 
 const NAV_ITEMS: { id: PanelId; label: string; icon: React.ElementType }[] = [
-  { id: "members", label: "Members", icon: Users },
-  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-  { id: "challenges", label: "Challenges", icon: Zap },
-  { id: "analytics", label: "Analytics", icon: BarChart2 },
-  { id: "goals", label: "Goals", icon: Target },
+  { id: "members",     label: "Members",     icon: Users     },
+  { id: "leaderboard", label: "Leaderboard", icon: Trophy    },
+  { id: "challenges",  label: "Challenges",  icon: Zap       },
+  { id: "analytics",   label: "Analytics",  icon: BarChart2  },
+  { id: "goals",       label: "Goals",       icon: Target    },
 ];
 
 export default function RoomPage({ params }: RoomPageProps) {
@@ -69,8 +64,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [leavingRoom, setLeavingRoom] = useState(false);
   const [selectedMember, setSelectedMember] = useState<RoomMember | null>(null);
-  const [showChat, setShowChat] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<"chat" | "focus">("chat");
+  const [sidebarTab, setSidebarTab] = useState<"timer" | "focus">("timer");
+  const [chatOpen, setChatOpen] = useState(true);
 
   const subjectsQuery = useMemo(
     () =>
@@ -91,10 +86,9 @@ export default function RoomPage({ params }: RoomPageProps) {
 
   const isOwner = user?.uid === room?.ownerId;
   const onlineCount = useMemo(
-    () => members.filter(m => m.status !== "offline").length,
+    () => members.filter((m) => m.status !== "offline").length,
     [members]
   );
-
   const totalStudyMinutesToday = useMemo(() => {
     const seconds = members.reduce((acc, m) => acc + (m.todaySeconds || 0), 0);
     return Math.floor(seconds / 60);
@@ -135,9 +129,24 @@ export default function RoomPage({ params }: RoomPageProps) {
     );
   }
 
+  const themeId = (room.chatTheme || "default") as ChatThemeId;
+  const themeObj = CHAT_THEMES.find((t) => t.id === themeId) || CHAT_THEMES[0];
+
   return (
-    <div className="relative flex-1 min-h-0 overflow-y-auto">
-      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 space-y-5 pb-10">
+    <div
+      className="relative flex-1 min-h-0 overflow-y-auto"
+      style={{
+        "--primary": themeObj.primaryHsl,
+        "--ring": themeObj.ringHsl,
+      } as React.CSSProperties}
+    >
+      {themeObj.roomBg && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{ background: themeObj.roomBg, transition: "background 0.6s ease" }}
+        />
+      )}
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 space-y-5 pb-10 relative z-10">
 
         {/* ── Room Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
@@ -166,8 +175,8 @@ export default function RoomPage({ params }: RoomPageProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground"
-              onClick={() => setShowChat(v => !v)}
-              title={showChat ? "Hide chat" : "Show chat"}
+              onClick={() => setChatOpen((v) => !v)}
+              title={chatOpen ? "Hide chat" : "Show chat"}
             >
               <MessageCircle className="h-4 w-4" />
             </Button>
@@ -178,11 +187,9 @@ export default function RoomPage({ params }: RoomPageProps) {
             )}
             {!isOwner && (
               <Button
-                variant="ghost"
-                size="icon"
+                variant="ghost" size="icon"
                 className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={handleLeave}
-                disabled={leavingRoom}
+                onClick={handleLeave} disabled={leavingRoom}
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -193,13 +200,11 @@ export default function RoomPage({ params }: RoomPageProps) {
         {/* ── Streak Banner ── */}
         <RoomStreakBanner room={room} totalStudyMinutesToday={totalStudyMinutesToday} />
 
-        {/* ── Main layout: panel + sidebar ── */}
+        {/* ── Main layout: left content + right sidebar ── */}
         <div className="flex flex-col lg:flex-row gap-5">
 
-          {/* Left: Glassmorphic nav + panel */}
+          {/* Left: Timer grid + nav + panel */}
           <div className="flex-1 min-w-0 space-y-4">
-            
-            {/* ── Live Timer Grid ── */}
             <RoomErrorBoundary fallbackLabel="Could not load live timers.">
               <MemberTimerGrid
                 members={members}
@@ -209,9 +214,9 @@ export default function RoomPage({ params }: RoomPageProps) {
               />
             </RoomErrorBoundary>
 
-            {/* Glassmorphic pill nav */}
-            <div id="room-pill-nav" className="glass border border-white/10 rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
-              {NAV_ITEMS.map(item => {
+            {/* Pill nav */}
+            <div className="glass border border-white/10 rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
+              {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const active = activePanel === item.id;
                 return (
@@ -277,71 +282,117 @@ export default function RoomPage({ params }: RoomPageProps) {
             </AnimatePresence>
           </div>
 
-          {/* Right sidebar: Timer + Chat (collapsible) */}
-          <AnimatePresence>
-            {showChat && (
-              <motion.div
-                initial={{ opacity: 0, x: 20, width: 0 }}
-                animate={{ opacity: 1, x: 0, width: "auto" }}
-                exit={{ opacity: 0, x: 20, width: 0 }}
-                transition={{ duration: 0.25 }}
-                className="w-full lg:w-80 shrink-0 space-y-4 overflow-hidden flex flex-col h-[calc(100vh-140px)]"
+          {/* Right sidebar: My Timer + Room Focus */}
+          <div className="w-full lg:w-80 shrink-0 space-y-4">
+            <div className="flex bg-white/5 p-1 rounded-xl gap-1">
+              <button
+                onClick={() => setSidebarTab("timer")}
+                className={cn(
+                  "flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                  sidebarTab === "timer"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-white/5"
+                )}
               >
-                <div className="flex bg-white/5 p-1 rounded-xl gap-1 shrink-0">
-                  <button
-                    onClick={() => setSidebarTab("chat")}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
-                      sidebarTab === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5"
-                    )}
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" /> Chat
-                  </button>
-                  <button
-                    onClick={() => setSidebarTab("focus")}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
-                      sidebarTab === "focus" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5"
-                    )}
-                  >
-                    <Timer className="h-3.5 w-3.5" /> Focus Timer
-                  </button>
-                </div>
-                
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={sidebarTab}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="h-full"
-                    >
-                      {sidebarTab === "focus" ? (
-                        <RoomErrorBoundary fallbackLabel="Could not load focus timer.">
-                          <SharedFocusPanel roomId={roomId} room={room} />
-                        </RoomErrorBoundary>
-                      ) : (
-                        <RoomErrorBoundary fallbackLabel="Could not load chat.">
-                          <RoomChat roomId={roomId} messages={messages} roomOwnerId={room.ownerId} />
-                        </RoomErrorBoundary>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
+                <Timer className="h-3 w-3" /> My Timer
+              </button>
+              <button
+                onClick={() => setSidebarTab("focus")}
+                className={cn(
+                  "flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                  sidebarTab === "focus"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-white/5"
+                )}
+              >
+                <Zap className="h-3 w-3" /> Room Focus
+              </button>
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={sidebarTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                {sidebarTab === "timer" ? (
+                  <RoomErrorBoundary fallbackLabel="Could not load personal timer.">
+                    <RoomPersonalTimer subjects={subjects ?? []} />
+                  </RoomErrorBoundary>
+                ) : (
+                  <RoomErrorBoundary fallbackLabel="Could not load room focus timer.">
+                    <SharedFocusPanel roomId={roomId} room={room} />
+                  </RoomErrorBoundary>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* ── Separate Chat Section ── */}
+        <div className="w-full">
+          {/* Toggle header */}
+          <button
+            onClick={() => setChatOpen((v) => !v)}
+            className={cn(
+              "w-full flex items-center gap-3 px-5 py-3.5 transition-colors group",
+              "glass border border-white/10",
+              chatOpen ? "rounded-t-2xl rounded-b-none border-b-0" : "rounded-2xl"
+            )}
+          >
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <MessageCircle className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-bold text-sm">Room Chat</span>
+              <span className="text-[11px] text-muted-foreground/50 font-normal hidden sm:block">
+                — {messages.length} messages
+              </span>
+              {!chatOpen && messages.length > 0 && (
+                <span className="ml-1 bg-primary/15 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/25">
+                  {messages.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors shrink-0">
+              <span className="text-[11px] font-medium">{chatOpen ? "Collapse" : "Expand"}</span>
+              {chatOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </div>
+          </button>
+
+          {/* Chat panel with framer motion */}
+          <AnimatePresence initial={false}>
+            {chatOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 580, opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden border border-t-0 border-white/10 rounded-b-2xl"
+              >
+                <div className="h-[580px] relative">
+                  <RoomErrorBoundary fallbackLabel="Could not load chat.">
+                    <StandaloneChat
+                      roomId={roomId}
+                      roomName={room.name}
+                      messages={messages}
+                      roomOwnerId={room.ownerId}
+                      chatTheme={room.chatTheme}
+                    />
+                  </RoomErrorBoundary>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {/* Member Stats */}
+        <div className="w-full mt-4">
+          <RoomMemberStats members={members} />
+        </div>
       </div>
 
-      {/* ── Separate Member Stats Section ── */}
-      <div className="w-full max-w-6xl mx-auto mt-6">
-        <RoomMemberStats members={members} />
-      </div>
-
-      {/* Finish effect overlay */}
+      {/* Finish FX */}
       <RoomFinishFx members={members} currentUserId={user.uid} />
 
       {/* Member profile drawer */}
@@ -350,7 +401,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         onClose={() => setSelectedMember(null)}
       />
 
-      {/* Settings */}
+      {/* Settings dialog (owner only) */}
       {isOwner && (
         <RoomSettingsDialog
           room={room}

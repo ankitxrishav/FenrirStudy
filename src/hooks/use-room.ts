@@ -111,7 +111,7 @@ export function useRoom(roomId: string) {
 
   const { data: roomGoals, loading: goalsLoading } = useCollection<RoomGoal>(goalsQuery);
 
-  const loading = roomLoading || membersLoading || messagesLoading || challengesLoading || goalsLoading;
+  const loading = roomLoading;
 
   return {
     room: room ?? null,

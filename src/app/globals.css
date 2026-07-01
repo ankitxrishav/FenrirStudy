@@ -109,6 +109,57 @@
     --accent: 130 50% 10%;
     --card: 130 30% 2%;
   }
+
+  /* ── Aurora: deep purple-teal ─────────────────────── */
+  [data-theme="aurora"] {
+    --primary: 270 80% 65%;
+    --background: 260 20% 98%;
+    --accent: 270 40% 90%;
+    --card: 260 20% 98%;
+    --ring: 270 80% 65%;
+  }
+  .dark[data-theme="aurora"] {
+    --primary: 270 80% 65%;
+    --background: 265 35% 4%;
+    --accent: 265 40% 14%;
+    --card: 265 35% 4%;
+    --ring: 270 80% 65%;
+    --border: 265 30% 16%;
+  }
+
+  /* ── Crimson: blood red energy ─────────────────────── */
+  [data-theme="crimson"] {
+    --primary: 350 85% 55%;
+    --background: 350 10% 98%;
+    --accent: 350 50% 92%;
+    --card: 350 10% 98%;
+    --ring: 350 85% 55%;
+  }
+  .dark[data-theme="crimson"] {
+    --primary: 350 85% 60%;
+    --background: 350 30% 3%;
+    --accent: 350 40% 12%;
+    --card: 350 30% 3%;
+    --ring: 350 85% 60%;
+    --border: 350 25% 14%;
+  }
+
+  /* ── Sakura: soft cherry blossom pink ─────────────── */
+  [data-theme="sakura"] {
+    --primary: 330 70% 62%;
+    --background: 330 15% 99%;
+    --accent: 330 45% 92%;
+    --card: 330 15% 99%;
+    --ring: 330 70% 62%;
+  }
+  .dark[data-theme="sakura"] {
+    --primary: 330 70% 65%;
+    --background: 330 28% 4%;
+    --accent: 330 35% 13%;
+    --card: 330 28% 4%;
+    --ring: 330 70% 65%;
+    --border: 330 22% 15%;
+  }
 }
 
 @layer base {

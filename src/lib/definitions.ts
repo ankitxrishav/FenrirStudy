@@ -148,6 +148,7 @@ export type Room = {
     cycleCount: number;     // how many work cycles completed
     startedBy: string;      // userId of who started it
   };
+  chatTheme?: string;       // shared chat background theme — synced to all members
 };
 
 export type RoomMember = {

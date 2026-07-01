@@ -27,13 +27,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Palette } from "lucide-react";
 import { doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { leaveRoom } from "@/hooks/use-room";
 import { Room, RoomMember } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { RoomThemePicker } from "@/components/app/rooms/room-theme-picker";
+import { CHAT_THEMES, ChatThemeId } from "@/hooks/use-room-theme";
 
 interface RoomSettingsDialogProps {
   room: Room;
@@ -125,6 +127,7 @@ export function RoomSettingsDialog({ room, members, isOpen, onOpenChange }: Room
           <Tabs defaultValue="settings">
             <TabsList className="w-full">
               <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
+              <TabsTrigger value="theme" className="flex-1 gap-1.5"><Palette className="h-3.5 w-3.5" />Theme</TabsTrigger>
               <TabsTrigger value="members" className="flex-1">Members ({members.length})</TabsTrigger>
             </TabsList>
 
@@ -162,6 +165,22 @@ export function RoomSettingsDialog({ room, members, isOpen, onOpenChange }: Room
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Theme tab — writes directly to Firestore, shared with all members */}
+            <TabsContent value="theme" className="pt-4">
+              <RoomThemePicker
+                current={(CHAT_THEMES.find(t => t.id === room.chatTheme) ? room.chatTheme as ChatThemeId : "default")}
+                onChange={async (newTheme) => {
+                  if (!firestore) return;
+                  try {
+                    await updateDoc(doc(firestore, "rooms", room.id), { chatTheme: newTheme });
+                    toast({ title: `Chat theme set to ${newTheme}!` });
+                  } catch {
+                    toast({ variant: "destructive", title: "Failed to update theme" });
+                  }
+                }}
+              />
             </TabsContent>
 
             {/* Members tab */}

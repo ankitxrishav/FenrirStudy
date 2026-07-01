@@ -96,6 +96,8 @@ interface Toy {
   vy: number;
 }
 
+let particleIdCounter = 0;
+
 interface Particle {
   id: number;
   x: number;
@@ -547,7 +549,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
     const newParticles: Particle[] = [];
     for (let i = 0; i < count; i++) {
       newParticles.push({
-        id: Math.random() + Date.now(),
+        id: ++particleIdCounter,
         x: Math.random() * 80 - 40,
         y: Math.random() * 30 - 30,
         emoji,

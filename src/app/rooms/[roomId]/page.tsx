@@ -70,7 +70,7 @@ export default function RoomPage({ params }: RoomPageProps) {
   const subjectsQuery = useMemo(
     () =>
       user && firestore
-        ? query(collection(firestore, "subjects"), where("userId", "==", user.uid))
+        ? query(collection(firestore, "subjects"), where("userId", "==", user.uid), where("archived", "==", false))
         : null,
     [user, firestore]
   );

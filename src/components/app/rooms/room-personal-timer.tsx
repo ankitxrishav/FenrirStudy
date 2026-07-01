@@ -19,11 +19,16 @@ import {
   Timer,
   BookOpen,
   RefreshCw,
+  PlusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimer } from "@/hooks/use-timer";
 import { Subject } from "@/lib/definitions";
 import { motion, AnimatePresence } from "framer-motion";
+import { AddSubjectDialog } from "@/components/app/timer/add-subject-dialog";
+import { useUser, useFirestore } from "@/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 interface RoomPersonalTimerProps {
   subjects: Subject[];
@@ -58,6 +63,44 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
     handleDurationChange,
     setSelectedSubjectId,
   } = useTimer();
+
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isAddSubjectOpen, setAddSubjectOpen] = useState(false);
+
+  const handleAddSubject = async (newSubject: Omit<Subject, 'id' | 'archived' | 'userId' | 'createdAt'>) => {
+    if (!user) {
+      toast({
+        title: 'Please Log In',
+        description: 'You need to be logged in to add subjects.'
+      });
+      return;
+    }
+    if (!firestore) return;
+
+    try {
+      const docRef = await addDoc(collection(firestore, "subjects"), {
+        ...newSubject,
+        userId: user.uid,
+        archived: false,
+        createdAt: serverTimestamp()
+      });
+      setSelectedSubjectId(docRef.id);
+      handleSubjectChange(docRef.id);
+      toast({
+        title: 'Subject Added',
+        description: `Subject "${newSubject.name}" created successfully.`
+      });
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      toast({
+        title: 'Error',
+        description: 'Could not add subject.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const [localDuration, setLocalDuration] = useState(customDuration);
   const [isStopping, setIsStopping] = useState(false);
@@ -119,6 +162,7 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
     : "border-white/10";
 
   return (
+    <>
     <Card
       className={cn(
         "glass shadow-xl transition-all duration-500",
@@ -169,55 +213,68 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
             <BookOpen className="h-3 w-3" />
             Subject
           </Label>
-          <Select
-            value={selectedSubjectId ?? ""}
-            onValueChange={(val) => {
-              if (isIdle) {
-                setSelectedSubjectId(val || null);
-                handleSubjectChange(val);
-              }
-            }}
-            disabled={!isIdle}
-          >
-            <SelectTrigger
-              className={cn(
-                "h-9 text-sm bg-white/5 border-white/10",
-                !isIdle && "opacity-60 cursor-not-allowed"
-              )}
+          <div className="flex gap-2">
+            <div className="flex-1 min-w-0">
+              <Select
+                value={selectedSubjectId ?? ""}
+                onValueChange={(val) => {
+                  if (isIdle) {
+                    setSelectedSubjectId(val || null);
+                    handleSubjectChange(val);
+                  }
+                }}
+                disabled={!isIdle}
+              >
+                <SelectTrigger
+                  className={cn(
+                    "h-9 text-sm bg-white/5 border-white/10 w-full",
+                    !isIdle && "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  <SelectValue placeholder="Select a subject…">
+                    {selectedSubject ? (
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: selectedSubject.color }}
+                        />
+                        {selectedSubject.name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Select a subject…</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.length === 0 && (
+                    <p className="text-xs text-muted-foreground px-3 py-2">
+                      No subjects yet.
+                    </p>
+                  )}
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: s.color }}
+                        />
+                        {s.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setAddSubjectOpen(true)}
+              disabled={!isIdle}
+              className="h-9 w-9 bg-white/5 border-white/10 shrink-0"
             >
-              <SelectValue placeholder="Select a subject…">
-                {selectedSubject ? (
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="h-2 w-2 rounded-full shrink-0"
-                      style={{ backgroundColor: selectedSubject.color }}
-                    />
-                    {selectedSubject.name}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Select a subject…</span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {subjects.length === 0 && (
-                <p className="text-xs text-muted-foreground px-3 py-2">
-                  No subjects yet — add them on the dashboard.
-                </p>
-              )}
-              {subjects.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    {s.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </div>
           {!isIdle && (
             <p className="text-[10px] text-muted-foreground/60">
               Stop timer to change subject
@@ -413,5 +470,12 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
         </AnimatePresence>
       </CardContent>
     </Card>
+
+    <AddSubjectDialog
+      isOpen={isAddSubjectOpen}
+      onOpenChange={setAddSubjectOpen}
+      onAddSubject={handleAddSubject}
+    />
+    </>
   );
 }

@@ -90,13 +90,23 @@ export function StandaloneChat({ roomId, roomName, messages, roomOwnerId, chatTh
     const newMsgs = messages.length - prevLenRef.current;
     prevLenRef.current = messages.length;
     if (newMsgs > 0) {
-      if (isAtBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      else setUnreadCount((c) => c + newMsgs);
+      if (isAtBottom && scrollRef.current) {
+        scrollRef.current.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      } else {
+        setUnreadCount((c) => c + newMsgs);
+      }
     }
   }, [messages.length, isAtBottom]);
 
   // Initial scroll
-  useEffect(() => { bottomRef.current?.scrollIntoView(); }, []);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, []);
 
   // 24h auto-cleanup
   useEffect(() => {
@@ -459,7 +469,15 @@ export function StandaloneChat({ roomId, roomName, messages, roomOwnerId, chatTh
             {!isAtBottom && (
               <motion.button
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                onClick={() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); setUnreadCount(0); }}
+                onClick={() => {
+                  if (scrollRef.current) {
+                    scrollRef.current.scrollTo({
+                      top: scrollRef.current.scrollHeight,
+                      behavior: "smooth",
+                    });
+                  }
+                  setUnreadCount(0);
+                }}
                 className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl z-20 transition-transform hover:scale-105"
                 style={{ background: theme.ownBubbleBg }}
               >

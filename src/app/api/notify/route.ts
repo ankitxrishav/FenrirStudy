@@ -2,11 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApps, initializeApp, cert } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import fs from "fs";
+import path from "path";
 
-// Initialize Firebase Admin SDK exactly once using modern modular API
+// Initialize Firebase Admin SDK exactly once, supporting environment variable (Vercel) and local file fallback
 if (!getApps().length) {
   try {
-    const serviceAccount = require("../../../../../fenrirstudyx-firebase-adminsdk-fbsvc-c457901450.json");
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // For Vercel production deployment: Read credentials from environment variable
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      console.log("Firebase Admin initialized using process.env.FIREBASE_SERVICE_ACCOUNT");
+    } else {
+      // For local development: Read credentials from root JSON file
+      const jsonPath = path.join(process.cwd(), "fenrirstudyx-firebase-adminsdk-fbsvc-c457901450.json");
+      if (fs.existsSync(jsonPath)) {
+        serviceAccount = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+        console.log("Firebase Admin initialized using local credentials JSON file");
+      } else {
+        throw new Error("Missing both process.env.FIREBASE_SERVICE_ACCOUNT and local credentials file.");
+      }
+    }
+
     initializeApp({
       credential: cert(serviceAccount),
     });

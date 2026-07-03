@@ -9,6 +9,7 @@ import BottomNav from '@/components/app/bottom-nav';
 import { AppHeader } from '@/components/app/header';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TimerProvider } from '@/hooks/use-timer';
+import { FcmInitializer } from '@/components/app/fcm-initializer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -62,6 +63,7 @@ export default function RootLayout({
                 </footer>
               </div>
               <Toaster />
+              <FcmInitializer />
             </TimerProvider>
           </FirebaseClientProvider>
         </ThemeProvider>

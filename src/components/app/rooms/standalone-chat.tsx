@@ -195,11 +195,24 @@ export function StandaloneChat({ roomId, roomName, messages, roomOwnerId, chatTh
           xhr.send(fd);
         });
       }
-      await sendMessage(firestore, user, roomId, text.trim(), uploadedUrl,
+      const messageText = text.trim();
+      await sendMessage(firestore, user, roomId, messageText, uploadedUrl,
         replyingTo ? { id: replyingTo.id, displayName: replyingTo.displayName, text: replyingTo.text, imageUrl: replyingTo.imageUrl } : undefined,
         cloudinaryPublicId
       );
       setText(""); clearAttachment(); setReplyingTo(null); setUploadProgress(0);
+
+      // Trigger background FCM push notification to all other room members
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          senderId: user.uid,
+          senderName: user.displayName || "Someone",
+          text: messageText || (uploadedUrl ? "📷 Sent a photo" : "New message"),
+        }),
+      }).catch((e) => console.error("FCM broadcast trigger failed:", e));
     } catch { alert("Failed to send."); }
     finally { setSending(false); }
   };

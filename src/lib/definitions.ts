@@ -63,6 +63,7 @@ export type User = {
   allTimeSessions?: number;
   currentSubjectTodaySeconds?: number;
   todaySubjectBreakdown?: Record<string, number>; // subjectId -> seconds
+  fcmTokens?: string[]; // PWA push notification registration tokens
 };
 
 // Represents the state of a user's timer, stored in Firestore

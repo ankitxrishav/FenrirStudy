@@ -39,3 +39,6 @@ next-env.d.ts
 
 # scratch / local scripts
 /scratch
+
+# Firebase Admin SDK private key
+/fenrirstudyx-firebase-adminsdk-fbsvc-c457901450.json

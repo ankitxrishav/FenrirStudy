@@ -1652,21 +1652,21 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
             const { bubbleStyle, arrowStyle, isNearTop } = getSpeechBubbleStyleAndArrow();
             return (
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, scale: 0.92 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="bg-black/90 backdrop-blur-md border border-white/10 text-white rounded-2xl px-3 py-2 text-[11px] leading-snug font-medium shadow-2xl text-center pointer-events-none"
+                exit={{ opacity: 0, scale: 0.92 }}
+                className="bg-ink text-surface border border-line rounded-2xl px-3 py-2 text-[11px] leading-snug font-medium text-center pointer-events-none"
                 style={bubbleStyle}
               >
                 {speech}
                 {isNearTop ? (
                   <div
-                    className="absolute bottom-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-black/90"
+                    className="absolute bottom-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-ink"
                     style={arrowStyle}
                   />
                 ) : (
                   <div
-                    className="absolute top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/90"
+                    className="absolute top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-ink"
                     style={arrowStyle}
                   />
                 )}
@@ -1958,34 +1958,34 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                 </div>
                 <button
                   onClick={() => setMenuOpen(false)}
-                  className="h-7 w-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center border border-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                  className="h-8 w-8 rounded-full bg-surface-soft hover:bg-surface-muted flex items-center justify-center border border-line/20 text-ink-muted hover:text-ink transition-colors"
                 >
                   ✕
                 </button>
               </div>
 
               {/* Needs Dashboard */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="glass border border-white/5 rounded-xl p-2.5 text-center">
-                  <span className="text-xs text-muted-foreground block mb-0.5">Hunger</span>
-                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-400" style={{ width: `${needs.hunger}%` }} />
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-surface-soft border border-line/20 rounded-xl p-2.5 text-center">
+                  <span className="text-xs text-ink-muted block mb-1">Hunger</span>
+                  <div className="h-1.5 w-full bg-surface-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-danger" style={{ width: `${needs.hunger}%` }} />
                   </div>
-                  <span className="text-[10px] font-bold mt-1 block">{needs.hunger}%</span>
+                  <span className="text-[10px] font-bold mt-1 block tabular-nums">{needs.hunger}%</span>
                 </div>
-                <div className="glass border border-white/5 rounded-xl p-2.5 text-center">
-                  <span className="text-xs text-muted-foreground block mb-0.5">Energy</span>
-                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-400" style={{ width: `${needs.energy}%` }} />
+                <div className="bg-surface-soft border border-line/20 rounded-xl p-2.5 text-center">
+                  <span className="text-xs text-ink-muted block mb-1">Energy</span>
+                  <div className="h-1.5 w-full bg-surface-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-success" style={{ width: `${needs.energy}%` }} />
                   </div>
-                  <span className="text-[10px] font-bold mt-1 block">{needs.energy}%</span>
+                  <span className="text-[10px] font-bold mt-1 block tabular-nums">{needs.energy}%</span>
                 </div>
-                <div className="glass border border-white/5 rounded-xl p-2.5 text-center">
-                  <span className="text-xs text-muted-foreground block mb-0.5">Affection</span>
-                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-pink-400" style={{ width: `${needs.affection}%` }} />
+                <div className="bg-surface-soft border border-line/20 rounded-xl p-2.5 text-center">
+                  <span className="text-xs text-ink-muted block mb-1">Affection</span>
+                  <div className="h-1.5 w-full bg-surface-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-clay" style={{ width: `${needs.affection}%` }} />
                   </div>
-                  <span className="text-[10px] font-bold mt-1 block">{needs.affection}%</span>
+                  <span className="text-[10px] font-bold mt-1 block tabular-nums">{needs.affection}%</span>
                 </div>
               </div>
 
@@ -1993,26 +1993,26 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
               <div className="space-y-4 flex-1 overflow-y-auto max-h-[45vh] pr-1">
                 <div className="flex gap-2">
                   <Button onClick={handlePet} className="flex-1 py-1 h-9 rounded-xl text-xs gap-1.5">
-                    💖 Pet Pihu
+                    Pet Pihu
                   </Button>
                   <button
                     onClick={handleMuteToggle}
-                    className="px-3 rounded-xl bg-white/5 border border-white/10 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="px-3 rounded-xl bg-surface-soft border border-line/20 text-xs text-ink-muted hover:text-ink transition-colors"
                   >
-                    {isMuted ? "🔇 Muted" : "🔊 Audio"}
+                    {isMuted ? "Muted" : "Audio"}
                   </button>
                 </div>
 
                 {/* Inventory Feed */}
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  <p className="text-[10px] uppercase font-bold text-ink-muted tracking-wider">
                     Feed Treats (study to earn more)
                   </p>
                   <div className="grid grid-cols-4 gap-2">
                     <button
                       onClick={() => handleFeed("fish")}
                       disabled={inventory.fish <= 0}
-                      className="glass border border-white/5 hover:bg-white/10 p-2 rounded-xl text-center disabled:opacity-30 transition-all flex flex-col items-center"
+                      className="bg-surface-soft border border-line/20 hover:border-line p-2 rounded-xl text-center disabled:opacity-30 transition-colors flex flex-col items-center"
                     >
                       <span className="text-xl">🐟</span>
                       <span className="text-[9px] font-bold mt-1 block">Fish ({inventory.fish})</span>
@@ -2020,7 +2020,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                     <button
                       onClick={() => handleFeed("milk")}
                       disabled={inventory.milk <= 0}
-                      className="glass border border-white/5 hover:bg-white/10 p-2 rounded-xl text-center disabled:opacity-30 transition-all flex flex-col items-center"
+                      className="bg-surface-soft border border-line/20 hover:border-line p-2 rounded-xl text-center disabled:opacity-30 transition-colors flex flex-col items-center"
                     >
                       <span className="text-xl">🥛</span>
                       <span className="text-[9px] font-bold mt-1 block">Milk ({inventory.milk})</span>
@@ -2028,7 +2028,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                     <button
                       onClick={() => handleFeed("tuna")}
                       disabled={inventory.tuna <= 0}
-                      className="glass border border-white/5 hover:bg-white/10 p-2 rounded-xl text-center disabled:opacity-30 transition-all flex flex-col items-center"
+                      className="bg-surface-soft border border-line/20 hover:border-line p-2 rounded-xl text-center disabled:opacity-30 transition-colors flex flex-col items-center"
                     >
                       <span className="text-xl">🥫</span>
                       <span className="text-[9px] font-bold mt-1 block">Tuna ({inventory.tuna})</span>
@@ -2036,7 +2036,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                     <button
                       onClick={() => handleFeed("treats")}
                       disabled={inventory.treats <= 0}
-                      className="glass border border-white/5 hover:bg-white/10 p-2 rounded-xl text-center disabled:opacity-30 transition-all flex flex-col items-center"
+                      className="bg-surface-soft border border-line/20 hover:border-line p-2 rounded-xl text-center disabled:opacity-30 transition-colors flex flex-col items-center"
                     >
                       <span className="text-xl">🍪</span>
                       <span className="text-[9px] font-bold mt-1 block">Treat ({inventory.treats})</span>
@@ -2046,25 +2046,25 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
 
                 {/* Spawning toys */}
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  <p className="text-[10px] uppercase font-bold text-ink-muted tracking-wider">
                     Place Toy in Room
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => spawnToy("ball")}
-                      className="flex-1 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs hover:bg-white/10 transition-colors"
+                      className="flex-1 py-1.5 bg-surface-soft border border-line/20 rounded-xl text-xs hover:border-line transition-colors"
                     >
                       🏀 Ball
                     </button>
                     <button
                       onClick={() => spawnToy("yarn")}
-                      className="flex-1 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs hover:bg-white/10 transition-colors"
+                      className="flex-1 py-1.5 bg-surface-soft border border-line/20 rounded-xl text-xs hover:border-line transition-colors"
                     >
                       🧶 Yarn
                     </button>
                     <button
                       onClick={() => spawnToy("feather")}
-                      className="flex-1 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs hover:bg-white/10 transition-colors"
+                      className="flex-1 py-1.5 bg-surface-soft border border-line/20 rounded-xl text-xs hover:border-line transition-colors"
                     >
                       🪶 Feather
                     </button>
@@ -2073,8 +2073,8 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
 
                 {/* Cat Breeds & Skins */}
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                    Cat Breed / Variety 🐱
+                  <p className="text-[10px] uppercase font-bold text-ink-muted tracking-wider">
+                    Cat Coat
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {(["orange", "tuxedo", "calico", "siamese", "grey"] as CatSkin[]).map(skin => (
@@ -2082,10 +2082,10 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                         key={skin}
                         onClick={() => handleSkinChange(skin)}
                         className={cn(
-                          "px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold transition-all",
+                          "px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold transition-colors",
                           catSkin === skin
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "bg-white/5 border-white/10 text-muted-foreground hover:text-foreground"
+                            ? "bg-clay border-line text-ink"
+                            : "bg-surface-soft border-line/20 text-ink-muted hover:text-ink"
                         )}
                       >
                         {skin}
@@ -2096,7 +2096,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
 
                 {/* Cosmetic Costumes */}
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  <p className="text-[10px] uppercase font-bold text-ink-muted tracking-wider">
                     Cosmetics & Hats
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -2108,10 +2108,10 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
                           localStorage.setItem("pihu_cosmetic", item);
                         }}
                         className={cn(
-                          "px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold transition-all",
+                          "px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold transition-colors",
                           cosmetic === item
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "bg-white/5 border-white/10 text-muted-foreground hover:text-foreground"
+                            ? "bg-clay border-line text-ink"
+                            : "bg-surface-soft border-line/20 text-ink-muted hover:text-ink"
                         )}
                       >
                         {item}

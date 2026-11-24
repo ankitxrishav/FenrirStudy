@@ -37,7 +37,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { calculateUserLevel } from "@/lib/level";
 import { useHabits } from "@/hooks/use-habits";
 import { HabitAnalytics } from "@/components/app/dashboard/habit-analytics";
-import { PihuCat } from "@/components/app/rooms/pihu-cat";
 
 type DashboardTab = 'overview' | 'habits';
 
@@ -107,7 +106,6 @@ export default function DashboardPage() {
 
     return (
         <div className="flex-col md:flex relative">
-            <PihuCat />
             <div className="flex-1 space-y-10 p-8 pt-6 max-w-7xl mx-auto w-full">
 
                 {/* Header Phase */}

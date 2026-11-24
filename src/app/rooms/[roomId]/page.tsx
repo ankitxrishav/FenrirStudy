@@ -29,7 +29,6 @@ import { RoomAnalytics } from "@/components/app/rooms/room-analytics";
 import { RoomGoalBoard } from "@/components/app/rooms/room-goal-board";
 import { RoomStreakBanner } from "@/components/app/rooms/room-streak-banner";
 import { RoomSettingsDialog } from "@/components/app/rooms/room-settings-dialog";
-import { PihuCat } from "@/components/app/rooms/pihu-cat";
 import { RoomErrorBoundary } from "@/components/app/rooms/room-error-boundary";
 import { RoomMemberStats } from "@/components/app/rooms/room-member-stats";
 import { RoomPersonalTimer } from "@/components/app/rooms/room-personal-timer";
@@ -410,9 +409,6 @@ export default function RoomPage({ params }: RoomPageProps) {
           onOpenChange={setSettingsOpen}
         />
       )}
-
-      {/* Roaming Cat Pihu */}
-      <PihuCat />
     </div>
   );
 }

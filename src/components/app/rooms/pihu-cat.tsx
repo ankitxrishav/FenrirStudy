@@ -1325,8 +1325,19 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
 
     let animFrameId: number;
     let lastTime = performance.now();
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      physics.current.x = Math.max(24, window.innerWidth - CAT_WIDTH - 28);
+      physics.current.y = Math.max(80, window.innerHeight - CAT_HEIGHT - 84);
+      physics.current.state = CatState.Sitting;
+      renderCat();
+    }
 
     const loop = (timestamp: number) => {
+      if (prefersReduced) return;
       if (document.visibilityState === "hidden") {
         lastTime = timestamp;
         animFrameId = requestAnimationFrame(loop);
@@ -1586,8 +1597,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none select-none"
-      style={{ zIndex: 99999 }}
+      className="fixed inset-0 pointer-events-none select-none z-30"
     >
       {/* Active Physics Toys */}
       {toys.map(toy => (
@@ -1928,7 +1938,7 @@ export function PihuCat({ greetingMode }: { greetingMode?: boolean }) {
       <AnimatePresence>
         {menuOpen && (
           <div
-            className="rounded-3xl glass border border-white/10 p-5 shadow-2xl pointer-events-auto"
+            className="rounded-[22px] border border-line bg-surface text-ink p-5 shadow-[0_12px_32px_rgba(23,21,19,0.16)] pointer-events-auto"
             style={getMenuStyle()}
           >
             <motion.div

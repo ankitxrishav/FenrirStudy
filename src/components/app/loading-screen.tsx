@@ -1,14 +1,14 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { FenrirLogo } from "@/components/icons";
 
-export default function LoadingScreen() {
-    return (
-        <div className="flex flex-col items-center justify-center p-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
-            <span className="mt-2 text-xs font-medium text-muted-foreground/40 tracking-wider uppercase">
-                Loading
-            </span>
-        </div>
-    );
+export default function LoadingScreen({ label = "Restoring workspace" }: { label?: string }) {
+  return (
+    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-3 p-8 text-ink">
+      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-surface-soft">
+        <FenrirLogo className="h-5 w-5 text-ink" />
+      </div>
+      <span className="font-mono text-xs text-ink-muted">{label}</span>
+    </div>
+  );
 }

@@ -32,15 +32,24 @@ export type Goal = {
 };
 
 
+export type TimerFaceStyle = 'flip' | 'digital' | 'minimal' | 'progress';
+export type StartPagePreference = 'rooms' | 'timer' | 'overview';
+
 export type UserSettings = {
   pomodoroDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;
+  cyclesBeforeLongBreak?: number;
+  autoStartNextPhase?: boolean;
+  focusSound?: boolean;
   sessionEndAlert: boolean;
   breakReminder: boolean;
-  studyTargetHours: number; // New: Daily study goal (1-12)
+  studyTargetHours: number;
   dashboardDensity?: 'compact' | 'relaxed';
   minimalMode?: boolean;
+  pewCatEnabled?: boolean;
+  timerFace?: TimerFaceStyle;
+  startPage?: StartPagePreference;
 };
 
 export type User = {
@@ -143,11 +152,12 @@ export type Room = {
   sharedFocus?: {
     status: 'running' | 'paused' | 'stopped';
     mode: 'work' | 'break';
-    startedAt: string;      // ISO when current phase started
-    workDuration: number;   // minutes, default 25
-    breakDuration: number;  // minutes, default 5
-    cycleCount: number;     // how many work cycles completed
-    startedBy: string;      // userId of who started it
+    startedAt: string;
+    workDuration: number;
+    breakDuration: number;
+    cycleCount: number;
+    startedBy: string;
+    pausedElapsed?: number;
   };
   chatTheme?: string;       // shared chat background theme — synced to all members
 };

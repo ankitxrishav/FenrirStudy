@@ -1,11 +1,11 @@
 {
   "name": "Fenrir Study",
   "short_name": "Fenrir",
-  "description": "Premium Ritual-Driven Focus System",
+  "description": "Calm editorial focus timer and collaborative study rooms",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#E9DFD0",
+  "theme_color": "#E9DFD0",
   "icons": [
     {
       "src": "/icon/pwa-192x192.png",

@@ -2,10 +2,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { startOfDay, startOfWeek, startOfMonth, format, subDays } from 'date-fns';
 import { doc, serverTimestamp, updateDoc, setDoc, addDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { TimerState, Session, User } from '@/lib/definitions';
+import { TimerState, Session, User, Subject } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ export type TimerFaceId = 'digital' | 'ring' | 'analog' | 'radial' | 'retro';
 interface TimerContextType {
     displayTime: number;
     selectedSubjectId: string | null;
+    selectedSubjectName: string | null;
+    selectedSubjectColor: string | null;
     mode: 'pomodoro' | 'stopwatch';
     customDuration: number;
     isActive: boolean;
@@ -53,15 +55,23 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
     const [displayTime, setDisplayTime] = useState(0);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    const timerStateRef = useRef<any>(null);
 
-    useEffect(() => {
-        timerStateRef.current = user && firestore ? doc(firestore, 'timerStates', user.uid) : null;
-    }, [user, firestore]);
+    const timerStateDoc = useMemo(
+        () => (user && firestore ? doc(firestore, 'timerStates', user.uid) : null),
+        [user, firestore]
+    );
+    const timerStateRef = useRef(timerStateDoc);
+    timerStateRef.current = timerStateDoc;
 
-    const { data: timerState, loading: timerStateLoading } = useDoc<TimerState>(timerStateRef.current);
+    const { data: timerState, loading: timerStateLoading } = useDoc<TimerState>(timerStateDoc);
     const userRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userData } = useDoc<User>(userRef);
+
+    const subjectsQuery = useMemo(
+        () => (user && firestore ? query(collection(firestore, 'subjects'), where('userId', '==', user.uid)) : null),
+        [user, firestore]
+    );
+    const { data: userSubjects } = useCollection<Subject>(subjectsQuery);
 
     const [customDuration, setCustomDuration] = useState(25);
     const [mode, setMode] = useState<'pomodoro' | 'stopwatch'>('pomodoro');
@@ -170,6 +180,24 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const isActive = timerState?.status === 'running';
     const isPaused = timerState?.status === 'paused';
     const isIdle = !timerState || timerState.status === 'stopped';
+
+    const selectedSubject = useMemo(
+        () => userSubjects?.find((s) => s.id === selectedSubjectId) ?? null,
+        [userSubjects, selectedSubjectId]
+    );
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        if (isActive) {
+            const total = Math.max(0, Math.floor(displayTime));
+            const mins = String(Math.floor(total / 60)).padStart(2, '0');
+            const secs = String(total % 60).padStart(2, '0');
+            const label = selectedSubject?.name || 'Focus';
+            document.title = `${mins}:${secs} · ${label} — fenrirstudy`;
+        } else {
+            document.title = 'fenrirstudy';
+        }
+    }, [isActive, displayTime, selectedSubject?.name]);
 
     useEffect(() => {
         if (userData?.settings?.pomodoroDuration && isIdle) {
@@ -407,7 +435,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                                 let newStreak = lastUpdate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? (userData?.streak || 0) + 1 : 1;
                                 updates.streak = newStreak;
                                 updates.lastStreakUpdate = today;
-                                toast({ title: "Streak Updated!", description: `🔥 ${newStreak} day streak!` });
+                                toast({ title: "Streak Updated", description: `${newStreak} day streak.` });
                             }
                         }
                         await updateDoc(userRef, updates);
@@ -459,6 +487,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const value = {
         displayTime,
         selectedSubjectId,
+        selectedSubjectName: selectedSubject?.name ?? null,
+        selectedSubjectColor: selectedSubject?.color ?? null,
         mode,
         customDuration,
         isActive,

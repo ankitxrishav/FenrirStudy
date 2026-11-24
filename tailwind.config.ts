@@ -1,5 +1,4 @@
-
-import type {Config} from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
@@ -11,16 +10,39 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: '1.5rem',
       screens: {
-        "2xl": "1400px",
+        '2xl': '1440px',
       },
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
+        sans: ['var(--font-sans)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       colors: {
+        page: 'var(--page)',
+        surface: {
+          DEFAULT: 'var(--surface)',
+          soft: 'var(--surface-soft)',
+          muted: 'var(--surface-muted)',
+        },
+        ink: {
+          DEFAULT: 'var(--ink)',
+          muted: 'var(--ink-muted)',
+        },
+        line: {
+          DEFAULT: 'var(--line)',
+          subtle: 'var(--line-subtle)',
+        },
+        clay: {
+          DEFAULT: 'var(--accent)',
+          soft: 'var(--accent-soft)',
+        },
+        highlight: 'var(--highlight)',
+        success: 'var(--success)',
+        danger: 'var(--danger)',
+
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
@@ -44,8 +66,8 @@ export default {
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'hsl(var(--surface-hover))',
+          foreground: 'var(--ink)',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -63,36 +85,24 @@ export default {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        panel: '24px',
+        lg: '16px',
+        md: '12px',
+        sm: '8px',
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
-        'pulse-slow': {
-            '0%, 100%': { opacity: '1' },
-            '50%': { opacity: '0.7' },
-        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'pulse-slow': 'pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

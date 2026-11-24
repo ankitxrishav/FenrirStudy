@@ -1,32 +1,41 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { TimerProvider } from "@/hooks/use-timer";
+import { PewCatProvider } from "@/hooks/use-pewcat";
+import { FcmInitializer } from "@/components/app/fcm-initializer";
+import { AppShell } from "@/components/app/app-shell";
 
-import type { Metadata } from 'next';
-import './globals.css';
-import { Inter } from 'next/font/google';
-import { cn } from '@/lib/utils';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from "@/components/ui/toaster"
-import BottomNav from '@/components/app/bottom-nav';
-import { AppHeader } from '@/components/app/header';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { TimerProvider } from '@/hooks/use-timer';
-import { FcmInitializer } from '@/components/app/fcm-initializer';
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
-  title: 'fenrirstudy',
-  description: 'A personal study analytics system to enhance focus and productivity.',
-  manifest: '/manifest.json',
+  title: "fenrirstudy",
+  description: "Warm editorial focus timer and collaborative study rooms.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'Fenrir',
+    statusBarStyle: "default",
+    title: "Fenrir",
   },
 };
 
 export const viewport = {
-  themeColor: '#09090b',
-  width: 'device-width',
+  themeColor: "#E9DFD0",
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
@@ -41,29 +50,24 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'h-dvh bg-background font-sans antialiased overflow-hidden',
-          inter.variable
+          "min-h-dvh bg-page font-sans text-ink antialiased",
+          dmSans.variable,
+          ibmPlexMono.variable
         )}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <FirebaseClientProvider>
             <TimerProvider>
-              <div className="relative flex h-full w-full flex-col">
-                <AppHeader />
-                <main className="flex-1 overflow-y-auto pt-16 pb-24">
-                  {children}
-                </main>
-                <footer className="fixed bottom-0 inset-x-0 z-50 h-20 flex items-center justify-center pointer-events-none">
-                  <BottomNav />
-                </footer>
-              </div>
-              <Toaster />
-              <FcmInitializer />
+              <PewCatProvider>
+                <AppShell>{children}</AppShell>
+                <Toaster />
+                <FcmInitializer />
+              </PewCatProvider>
             </TimerProvider>
           </FirebaseClientProvider>
         </ThemeProvider>

@@ -34,30 +34,36 @@ function FlipTile({
   value,
   label,
   size,
+  compact,
   isCharcoal,
   isRunning,
 }: {
   value: string;
   label: string;
   size: "embedded" | "fullscreen";
+  compact: boolean;
   isCharcoal: boolean;
   isRunning: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1.5 sm:gap-2">
       <div
         className={cn(
-          "relative flex items-center justify-center rounded-[14px] border select-none overflow-hidden transition-colors duration-200",
+          "relative flex items-center justify-center border select-none overflow-hidden transition-colors duration-200",
           isCharcoal
             ? "border-[#3E372F] bg-[#221F1B] text-[#F2ECE1]"
             : "border-line bg-surface-soft text-ink",
           size === "fullscreen"
-            ? "w-[104px] h-[118px] min-[380px]:w-[122px] min-[380px]:h-[138px] sm:w-[164px] sm:h-[184px] md:w-[200px] md:h-[220px] rounded-[20px]"
-            : "w-[78px] h-[88px] min-[380px]:w-[92px] min-[380px]:h-[104px] sm:w-[116px] sm:h-[128px]"
+            ? compact
+              ? "w-[74px] h-[86px] min-[420px]:w-[96px] min-[420px]:h-[110px] sm:w-[144px] sm:h-[164px] md:w-[172px] md:h-[192px] rounded-[16px] sm:rounded-[20px]"
+              : "w-[104px] h-[118px] min-[380px]:w-[122px] min-[380px]:h-[138px] sm:w-[164px] sm:h-[184px] md:w-[200px] md:h-[220px] rounded-[20px]"
+            : compact
+              ? "w-[64px] h-[74px] min-[380px]:w-[74px] min-[380px]:h-[86px] sm:w-[94px] sm:h-[106px] rounded-[12px]"
+              : "w-[78px] h-[88px] min-[380px]:w-[92px] min-[380px]:h-[104px] sm:w-[116px] sm:h-[128px] rounded-[14px]"
         )}
       >
-        {/* Top/bottom subtle shade difference for split-flap depth */}
         <div
+          aria-hidden="true"
           className={cn(
             "absolute inset-x-0 top-0 h-1/2 pointer-events-none",
             isCharcoal ? "bg-white/[0.02]" : "bg-black/[0.02]"
@@ -67,13 +73,16 @@ function FlipTile({
           className={cn(
             "relative z-10 font-mono font-semibold timer-digit tracking-tight leading-none",
             size === "fullscreen"
-              ? "text-[54px] min-[380px]:text-[66px] sm:text-[96px] md:text-[118px]"
-              : "text-[40px] min-[380px]:text-[48px] sm:text-[62px]"
+              ? compact
+                ? "text-[38px] min-[420px]:text-[52px] sm:text-[82px] md:text-[100px]"
+                : "text-[54px] min-[380px]:text-[66px] sm:text-[96px] md:text-[118px]"
+              : compact
+                ? "text-[32px] min-[380px]:text-[38px] sm:text-[48px]"
+                : "text-[40px] min-[380px]:text-[48px] sm:text-[62px]"
           )}
         >
           {value}
         </span>
-        {/* Split-flap horizontal hinge seam */}
         <div
           aria-hidden="true"
           className={cn(
@@ -116,7 +125,9 @@ export function TimerPresentation({
   const isCharcoal = size === "fullscreen" && tone === "charcoal";
 
   const progress =
-    totalSeconds > 0 ? Math.max(0, Math.min(1, seconds / totalSeconds)) : 0;
+    totalSeconds > 0
+      ? Math.max(0, Math.min(1, seconds / totalSeconds))
+      : Math.max(0.02, (seconds % 60) / 60);
 
   const textColor = isCharcoal ? "text-[#F2ECE1]" : "text-ink";
   const mutedColor = isCharcoal ? "text-[#A49B8F]" : "text-ink-muted";
@@ -124,7 +135,6 @@ export function TimerPresentation({
 
   return (
     <div className="flex flex-col items-center justify-center w-full select-none">
-      {/* Status & Context Header */}
       <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-center gap-2 text-center">
         <span
           className={cn(
@@ -160,12 +170,11 @@ export function TimerPresentation({
         )}
       </div>
 
-      {/* Style 1: Flip Clock */}
       {styleId === "flip" && (
         <div
           className={cn(
             "flex items-center justify-center",
-            size === "fullscreen" ? "gap-2.5 sm:gap-4" : "gap-2 sm:gap-3"
+            size === "fullscreen" ? "gap-1.5 sm:gap-4" : "gap-1.5 sm:gap-3"
           )}
         >
           {showHours && (
@@ -174,6 +183,7 @@ export function TimerPresentation({
                 value={hh}
                 label="HRS"
                 size={size}
+                compact={showHours}
                 isCharcoal={isCharcoal}
                 isRunning={false}
               />
@@ -181,7 +191,7 @@ export function TimerPresentation({
                 aria-hidden="true"
                 className={cn(
                   "font-mono font-semibold pb-5",
-                  size === "fullscreen" ? "text-3xl sm:text-5xl" : "text-2xl sm:text-3xl",
+                  size === "fullscreen" ? "text-2xl sm:text-5xl" : "text-xl sm:text-3xl",
                   mutedColor
                 )}
               >
@@ -193,6 +203,7 @@ export function TimerPresentation({
             value={mm}
             label="MIN"
             size={size}
+            compact={showHours}
             isCharcoal={isCharcoal}
             isRunning={false}
           />
@@ -200,7 +211,7 @@ export function TimerPresentation({
             aria-hidden="true"
             className={cn(
               "font-mono font-semibold pb-5",
-              size === "fullscreen" ? "text-3xl sm:text-5xl" : "text-2xl sm:text-3xl",
+              size === "fullscreen" ? "text-2xl sm:text-5xl" : "text-xl sm:text-3xl",
               mutedColor
             )}
           >
@@ -210,13 +221,13 @@ export function TimerPresentation({
             value={ss}
             label="SEC"
             size={size}
+            compact={showHours}
             isCharcoal={isCharcoal}
             isRunning={isRunning}
           />
         </div>
       )}
 
-      {/* Style 2: Digital */}
       {styleId === "digital" && (
         <div className="flex flex-col items-center">
           <div
@@ -224,8 +235,8 @@ export function TimerPresentation({
               "font-mono font-semibold timer-digit tracking-tight leading-none",
               textColor,
               size === "fullscreen"
-                ? "text-[64px] min-[380px]:text-[84px] sm:text-[126px] md:text-[160px]"
-                : "text-[52px] min-[380px]:text-[64px] sm:text-[84px]"
+                ? "text-[56px] min-[380px]:text-[76px] sm:text-[120px] md:text-[154px]"
+                : "text-[46px] min-[380px]:text-[60px] sm:text-[82px]"
             )}
           >
             {showHours ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`}
@@ -249,7 +260,6 @@ export function TimerPresentation({
         </div>
       )}
 
-      {/* Style 3: Minimal */}
       {styleId === "minimal" && (
         <div className="flex flex-col items-center">
           <div
@@ -257,8 +267,8 @@ export function TimerPresentation({
               "font-sans font-bold timer-digit tracking-[-0.04em] leading-none",
               textColor,
               size === "fullscreen"
-                ? "text-[68px] min-[380px]:text-[92px] sm:text-[140px] md:text-[176px]"
-                : "text-[56px] min-[380px]:text-[68px] sm:text-[92px]"
+                ? "text-[60px] min-[380px]:text-[84px] sm:text-[134px] md:text-[170px]"
+                : "text-[50px] min-[380px]:text-[64px] sm:text-[90px]"
             )}
           >
             {showHours ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`}
@@ -266,13 +276,12 @@ export function TimerPresentation({
         </div>
       )}
 
-      {/* Style 4: Progress */}
       {styleId === "progress" && (
         <div
           className={cn(
             "relative flex items-center justify-center",
             size === "fullscreen"
-              ? "h-[248px] w-[248px] min-[380px]:h-[280px] min-[380px]:w-[280px] sm:h-[340px] sm:w-[340px]"
+              ? "h-[244px] w-[244px] min-[380px]:h-[276px] min-[380px]:w-[276px] sm:h-[336px] sm:w-[336px]"
               : "h-[210px] w-[210px] sm:h-[236px] sm:w-[236px]"
           )}
         >
@@ -290,15 +299,11 @@ export function TimerPresentation({
               cy="60"
               r="54"
               fill="none"
-              stroke={totalSeconds > 0 ? accentStroke : "var(--ink)"}
+              stroke={accentStroke}
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 54}
-              strokeDashoffset={
-                totalSeconds > 0
-                  ? 2 * Math.PI * 54 * (1 - progress)
-                  : 0
-              }
+              strokeDashoffset={2 * Math.PI * 54 * (1 - progress)}
               className="transition-[stroke-dashoffset] duration-300"
             />
           </svg>
@@ -308,8 +313,12 @@ export function TimerPresentation({
                 "font-mono font-semibold timer-digit tracking-tight",
                 textColor,
                 size === "fullscreen"
-                  ? "text-4xl min-[380px]:text-5xl sm:text-6xl"
-                  : "text-3xl sm:text-4xl"
+                  ? showHours
+                    ? "text-3xl min-[380px]:text-4xl sm:text-5xl"
+                    : "text-4xl min-[380px]:text-5xl sm:text-6xl"
+                  : showHours
+                    ? "text-2xl sm:text-3xl"
+                    : "text-3xl sm:text-4xl"
               )}
             >
               {showHours ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`}

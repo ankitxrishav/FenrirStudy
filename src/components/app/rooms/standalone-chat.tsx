@@ -123,13 +123,13 @@ export function StandaloneChat({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ publicId: msg.cloudinaryPublicId }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
           updateDoc(doc(firestore, "rooms", roomId, "messages", msg.id), {
             imageUrl: null,
             imageDeleted: true,
             cloudinaryPublicId: null,
-          }).catch(() => {});
+          }).catch(() => { });
         }
       }
     });
@@ -169,7 +169,7 @@ export function StandaloneChat({
       const hasReacted = reactors.includes(user.uid);
       await updateDoc(doc(firestore, "rooms", roomId, "messages", msgId), {
         [`reactions.${emoji}`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid),
-      }).catch(() => {});
+      }).catch(() => { });
     },
     [firestore, user, roomId, messages]
   );
@@ -239,11 +239,11 @@ export function StandaloneChat({
         uploadedUrl,
         replyingTo
           ? {
-              id: replyingTo.id,
-              displayName: replyingTo.displayName,
-              text: replyingTo.text,
-              imageUrl: replyingTo.imageUrl,
-            }
+            id: replyingTo.id,
+            displayName: replyingTo.displayName,
+            text: replyingTo.text,
+            imageUrl: replyingTo.imageUrl,
+          }
           : undefined,
         cloudinaryPublicId
       );
@@ -410,13 +410,13 @@ export function StandaloneChat({
                       style={
                         isOwn
                           ? {
-                              background: theme.ownBubbleBg,
-                              color: theme.ownBubbleText,
-                              borderRadius: "18px 18px 4px 18px",
-                            }
+                            background: theme.ownBubbleBg,
+                            color: theme.ownBubbleText,
+                            borderRadius: "18px 18px 4px 18px",
+                          }
                           : {
-                              borderRadius: "18px 18px 18px 4px",
-                            }
+                            borderRadius: "18px 18px 18px 4px",
+                          }
                       }
                     >
                       {msg.imageDeleted && (

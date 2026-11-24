@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Play, Pause, RotateCcw, Minimize2, Square } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Play, Pause, RotateCcw, Minimize2, Square, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimerFaceStyle } from "@/lib/definitions";
 import { useTimerStyle, FullscreenTone } from "@/hooks/use-timer-style";
@@ -33,7 +34,7 @@ const STYLE_LABELS: { id: TimerFaceStyle; label: string }[] = [
   { id: "flip", label: "Flip" },
   { id: "digital", label: "Digital" },
   { id: "minimal", label: "Minimal" },
-  { id: "progress", label: "Progress" },
+  { id: "progress", label: "Ring" },
 ];
 
 const TONE_LABELS: { id: FullscreenTone; label: string }[] = [
@@ -65,6 +66,7 @@ export function FullscreenTimer({
   const { timerStyle, setTimerStyle, fullscreenTone, setFullscreenTone } = useTimerStyle();
   const { setFullscreenActive } = usePewCat();
 
+  const [mounted, setMounted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [confirmReset, setConfirmReset] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
@@ -72,23 +74,37 @@ export function FullscreenTimer({
   const [announcement, setAnnouncement] = useState("");
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const exitBtnRef = useRef<HTMLButtonElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const onCloseRef = useRef(onClose);
+  const openRef = useRef(open);
+  const mountedRef = useRef(true);
+  const prevOpenRef = useRef(false);
+  const enteredNativeFsRef = useRef(false);
+  const unmountExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevStateRef = useRef<{ isRunning: boolean; isPaused: boolean; isIdle: boolean }>({
     isRunning,
     isPaused,
     isIdle,
   });
 
-  // Hide PewCat while fullscreen overlay is active
+  onCloseRef.current = onClose;
+  openRef.current = open;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    setMounted(true);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setFullscreenActive(true);
     return () => setFullscreenActive(false);
   }, [open, setFullscreenActive]);
 
-  // Announce meaningful transitions (start, pause, complete) without announcing every second
   useEffect(() => {
     if (!open) return;
     const prev = prevStateRef.current;
@@ -102,39 +118,70 @@ export function FullscreenTimer({
     prevStateRef.current = { isRunning, isPaused, isIdle };
   }, [open, isRunning, isPaused, isIdle, modeLabel]);
 
-  // Request / sync native Fullscreen API + handle native Esc / fullscreenchange
   useEffect(() => {
-    if (!open) return;
+    if (unmountExitTimerRef.current) {
+      clearTimeout(unmountExitTimerRef.current);
+      unmountExitTimerRef.current = null;
+    }
 
-    const enterFullscreen = async () => {
-      try {
-        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch {
-        // Fallback: fixed full-viewport overlay remains active (e.g. iOS Safari)
+    if (!open) {
+      if (prevOpenRef.current && document.fullscreenElement && enteredNativeFsRef.current) {
+        enteredNativeFsRef.current = false;
+        document.exitFullscreen().catch(() => {});
       }
-    };
+      prevOpenRef.current = false;
+      return;
+    }
 
-    enterFullscreen();
-    exitBtnRef.current?.focus();
+    prevOpenRef.current = true;
+    let active = true;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    enteredNativeFsRef.current = Boolean(document.fullscreenElement);
+
+    const rafId = requestAnimationFrame(() => {
+      containerRef.current?.focus({ preventScroll: true });
+    });
+
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement
+        .requestFullscreen()
+        .then(() => {
+          if (active && document.fullscreenElement) {
+            enteredNativeFsRef.current = true;
+          }
+        })
+        .catch(() => {});
+    }
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        onClose();
+      if (document.fullscreenElement) {
+        if (active) enteredNativeFsRef.current = true;
+        return;
+      }
+      if (enteredNativeFsRef.current && openRef.current) {
+        enteredNativeFsRef.current = false;
+        onCloseRef.current();
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
-    };
-  }, [open, onClose]);
 
-  // Screen Wake Lock management
+    return () => {
+      active = false;
+      cancelAnimationFrame(rafId);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      // Defer native exit briefly so React StrictMode dev remounts cancel it cleanly
+      unmountExitTimerRef.current = setTimeout(() => {
+        if ((!mountedRef.current || !openRef.current) && document.fullscreenElement && enteredNativeFsRef.current) {
+          enteredNativeFsRef.current = false;
+          document.exitFullscreen().catch(() => {});
+        }
+      }, 60);
+    };
+  }, [open]);
+
   const acquireWakeLock = useCallback(async () => {
     if (typeof navigator === "undefined" || !("wakeLock" in navigator)) {
       setWakeStatus("unsupported");
@@ -186,31 +233,42 @@ export function FullscreenTimer({
     };
   }, [open, isRunning, acquireWakeLock, releaseWakeLock]);
 
-  // Auto-hide controls after 3s inactivity
+  const clearHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
   const revealControls = useCallback(() => {
     setControlsVisible(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      if (!styleOpen && !confirmReset) {
+    clearHideTimer();
+    if (open && isRunning && !styleOpen && !confirmReset) {
+      hideTimerRef.current = setTimeout(() => {
         setControlsVisible(false);
-      }
-    }, 3000);
-  }, [styleOpen, confirmReset]);
+      }, 3000);
+    }
+  }, [open, isRunning, styleOpen, confirmReset, clearHideTimer]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setStyleOpen(false);
+      setConfirmReset(false);
+      setControlsVisible(true);
+      clearHideTimer();
+      return;
+    }
     revealControls();
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, [open, revealControls]);
+    return clearHideTimer;
+  }, [open, isRunning, styleOpen, confirmReset, revealControls, clearHideTimer]);
 
   const handleExit = useCallback(() => {
+    enteredNativeFsRef.current = false;
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
-    onClose();
-  }, [onClose]);
+    onCloseRef.current();
+  }, []);
 
   const handlePrimaryToggle = useCallback(() => {
     if (!canControl) return;
@@ -223,7 +281,6 @@ export function FullscreenTimer({
     }
   }, [canControl, isRunning, isPaused, onPause, onResume, onStart]);
 
-  // Keyboard shortcuts: Space to start/pause, Esc to exit
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -239,7 +296,7 @@ export function FullscreenTimer({
         }
       } else if (e.code === "Space" && canControl) {
         const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "BUTTON" || tag === "INPUT") return;
+        if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return;
         e.preventDefault();
         handlePrimaryToggle();
       }
@@ -248,7 +305,7 @@ export function FullscreenTimer({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, canControl, confirmReset, styleOpen, handleExit, handlePrimaryToggle, revealControls]);
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
 
   const isCharcoal = fullscreenTone === "charcoal";
   const bgClass =
@@ -262,42 +319,40 @@ export function FullscreenTimer({
     ? "border-[#3E372F] bg-[#1F1C18] text-[#F2ECE1] hover:bg-[#2B2621]"
     : "border-line bg-surface-soft text-ink hover:bg-surface-muted";
 
-  return (
+  const overlay = (
     <div
       ref={containerRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Full-screen timer"
       onMouseMove={revealControls}
-      onClick={() => {
-        if (!controlsVisible) {
-          revealControls();
-        }
+      onPointerDown={() => {
+        if (styleOpen) setStyleOpen(false);
+        revealControls();
       }}
       className={cn(
-        "fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col justify-between px-4 py-5 sm:px-8 sm:py-7 transition-colors duration-200 select-none",
-        "pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+        "fixed inset-0 z-[90] flex h-[100dvh] w-screen flex-col justify-between overflow-y-auto px-4 py-4 sm:px-8 sm:py-7 transition-colors duration-200 select-none focus:outline-none",
+        "pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
         bgClass,
-        !controlsVisible && "cursor-none"
+        !controlsVisible && isRunning && "[@media(hover:hover)]:cursor-none"
       )}
     >
-      {/* Screen reader status announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {announcement}
       </div>
 
-      {/* Top minimal bar */}
       <div
         className={cn(
-          "flex items-center justify-between gap-3 transition-opacity duration-200",
+          "relative z-20 flex items-center justify-between gap-2 transition-opacity duration-200 shrink-0",
           controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span
             className={cn(
-              "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-wider",
+              "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-wider truncate",
               isCharcoal
                 ? "border-[#3E372F] bg-[#1F1C18] text-[#A49B8F]"
                 : "border-line/35 bg-surface-soft text-ink-muted"
@@ -311,23 +366,24 @@ export function FullscreenTimer({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => {
               setStyleOpen((v) => !v);
               revealControls();
             }}
+            aria-expanded={styleOpen}
             className={cn(
-              "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-medium transition-colors",
+              "inline-flex h-11 items-center gap-2 rounded-full border px-3.5 sm:px-4 text-xs font-medium transition-colors",
               surfaceBtnClass
             )}
           >
-            <span>Style: {STYLE_LABELS.find((s) => s.id === timerStyle)?.label}</span>
+            <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.75} />
+            <span>{STYLE_LABELS.find((s) => s.id === timerStyle)?.label}</span>
           </button>
 
           <button
-            ref={exitBtnRef}
             type="button"
             onClick={handleExit}
             aria-label="Exit full-screen timer"
@@ -342,12 +398,11 @@ export function FullscreenTimer({
         </div>
       </div>
 
-      {/* Temporary Style & Tone Chooser Popover */}
       {styleOpen && controlsVisible && (
         <div
-          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           className={cn(
-            "mx-auto mt-2 w-full max-w-md rounded-[18px] border p-4 space-y-4 z-20",
+            "fixed top-16 sm:top-20 right-4 sm:right-8 w-[calc(100vw-2rem)] max-w-sm rounded-[20px] border p-4 space-y-4 z-30",
             isCharcoal
               ? "border-[#3E372F] bg-[#1A1714] text-[#F2ECE1]"
               : "border-line bg-surface text-ink"
@@ -405,8 +460,7 @@ export function FullscreenTimer({
         </div>
       )}
 
-      {/* Center Minimal Timer Face */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center py-4 min-h-0">
         <TimerPresentation
           seconds={seconds}
           totalSeconds={totalSeconds}
@@ -421,13 +475,12 @@ export function FullscreenTimer({
         />
       </div>
 
-      {/* Bottom auto-hide control cluster */}
       <div
         className={cn(
-          "flex flex-col items-center gap-3 transition-opacity duration-200",
+          "relative z-20 flex flex-col items-center gap-3 shrink-0 transition-opacity duration-200",
           controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         {confirmReset ? (
           <div
@@ -466,8 +519,11 @@ export function FullscreenTimer({
               <>
                 <button
                   type="button"
-                  onClick={handlePrimaryToggle}
-                  className="inline-flex h-12 min-w-[128px] items-center justify-center gap-2 rounded-full border border-line bg-clay px-6 text-sm font-semibold text-ink hover:bg-clay/90 transition-colors"
+                  onClick={() => {
+                    revealControls();
+                    handlePrimaryToggle();
+                  }}
+                  className="inline-flex h-12 min-w-[132px] items-center justify-center gap-2 rounded-full border border-line bg-clay px-6 text-sm font-semibold text-ink hover:bg-clay/90 transition-colors"
                 >
                   {isRunning ? (
                     <>
@@ -476,7 +532,7 @@ export function FullscreenTimer({
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4" strokeWidth={2} />
+                      <Play className="h-4 w-4 fill-current" strokeWidth={2} />
                       <span>{isPaused ? "Resume" : "Start"}</span>
                     </>
                   )}
@@ -485,7 +541,10 @@ export function FullscreenTimer({
                 {onStop && !isIdle && (
                   <button
                     type="button"
-                    onClick={onStop}
+                    onClick={() => {
+                      revealControls();
+                      onStop();
+                    }}
                     className={cn(
                       "inline-flex h-12 min-w-[44px] items-center justify-center gap-2 rounded-full border px-5 text-sm font-medium transition-colors",
                       surfaceBtnClass
@@ -500,6 +559,7 @@ export function FullscreenTimer({
                   <button
                     type="button"
                     onClick={() => {
+                      revealControls();
                       if (isRunning || isPaused) {
                         setConfirmReset(true);
                       } else {
@@ -520,7 +580,7 @@ export function FullscreenTimer({
             ) : (
               <span
                 className={cn(
-                  "rounded-full border px-4 py-2 text-xs",
+                  "rounded-full border px-4 py-2 text-xs text-center",
                   isCharcoal
                     ? "border-[#3E372F] bg-[#1F1C18] text-[#A49B8F]"
                     : "border-line/30 bg-surface-soft text-ink-muted"
@@ -542,4 +602,6 @@ export function FullscreenTimer({
       </div>
     </div>
   );
+
+  return createPortal(overlay, document.body);
 }

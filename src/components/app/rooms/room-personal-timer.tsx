@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Play, Pause, Square, PlusCircle, RefreshCw, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimer } from "@/hooks/use-timer";
-import { useTimerStyle } from "@/hooks/use-timer-style";
+import { useTimerStyle, requestBrowserFullscreen } from "@/hooks/use-timer-style";
 import { Subject } from "@/lib/definitions";
 import { AddSubjectDialog } from "@/components/app/timer/add-subject-dialog";
 import { TimerPresentation } from "@/components/app/timer/timer-presentation";
@@ -65,6 +65,22 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
   useEffect(() => {
     if (isIdle) setLocalDuration(customDuration);
   }, [customDuration, isIdle]);
+
+  useEffect(() => {
+    if (isIdle && !selectedSubjectId && subjects.length > 0) {
+      setSelectedSubjectId(subjects[0].id);
+      handleSubjectChange(subjects[0].id);
+    }
+  }, [isIdle, selectedSubjectId, subjects, setSelectedSubjectId, handleSubjectChange]);
+
+  const openFullscreen = useCallback(() => {
+    requestBrowserFullscreen();
+    setFullscreenOpen(true);
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    setFullscreenOpen(false);
+  }, []);
 
   const handleAddSubject = async (
     newSubject: Omit<Subject, "id" | "archived" | "userId" | "createdAt">
@@ -129,7 +145,7 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setFullscreenOpen(true)}
+            onClick={openFullscreen}
             className="h-9 gap-1.5 rounded-full shrink-0"
             aria-label="Open full-screen personal timer"
           >
@@ -317,7 +333,7 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
 
       <FullscreenTimer
         open={fullscreenOpen}
-        onClose={() => setFullscreenOpen(false)}
+        onClose={closeFullscreen}
         context="room-personal"
         seconds={displayTime}
         totalSeconds={totalSeconds}
@@ -326,7 +342,8 @@ export function RoomPersonalTimer({ subjects }: RoomPersonalTimerProps) {
         isRunning={isActive}
         isPaused={isPaused}
         isIdle={isIdle}
-        canControl={true}
+        canControl={Boolean(selectedSubjectId) || !isIdle}
+        readOnlyHint="Add or select a subject in My Room Timer first"
         onStart={handleStart}
         onPause={handlePause}
         onResume={handleStart}

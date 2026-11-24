@@ -88,3 +88,14 @@ export function useTimerStyle() {
     setFullscreenTone,
   };
 }
+
+export function requestBrowserFullscreen() {
+  if (typeof document === "undefined") return;
+  try {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      void document.documentElement.requestFullscreen().catch(() => {});
+    }
+  } catch {
+    // Fallback overlay works without Fullscreen API
+  }
+}

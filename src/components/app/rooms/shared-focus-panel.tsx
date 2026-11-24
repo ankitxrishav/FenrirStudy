@@ -12,7 +12,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { Room } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
-import { useTimerStyle } from "@/hooks/use-timer-style";
+import { useTimerStyle, requestBrowserFullscreen } from "@/hooks/use-timer-style";
 import { TimerPresentation } from "@/components/app/timer/timer-presentation";
 
 const FullscreenTimer = dynamic(
@@ -135,6 +135,15 @@ export function SharedFocusPanel({ roomId, room }: SharedFocusPanelProps) {
     });
   }, [firestore, roomId, workDur, breakDur, sf, user]);
 
+  const openFullscreen = useCallback(() => {
+    requestBrowserFullscreen();
+    setFullscreenOpen(true);
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    setFullscreenOpen(false);
+  }, []);
+
   const modeLabel = noSession
     ? "Shared Pomodoro"
     : `${isBreak ? "Break" : "Focus"} · Cycle ${(sf?.cycleCount ?? 0) + 1}`;
@@ -154,7 +163,7 @@ export function SharedFocusPanel({ roomId, room }: SharedFocusPanelProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setFullscreenOpen(true)}
+            onClick={openFullscreen}
             className="h-9 gap-1.5 rounded-full shrink-0"
             aria-label="Open full-screen room timer"
           >
@@ -254,7 +263,7 @@ export function SharedFocusPanel({ roomId, room }: SharedFocusPanelProps) {
 
       <FullscreenTimer
         open={fullscreenOpen}
-        onClose={() => setFullscreenOpen(false)}
+        onClose={closeFullscreen}
         context="room-shared"
         seconds={noSession ? workDur * 60 : displaySeconds}
         totalSeconds={currentDur}

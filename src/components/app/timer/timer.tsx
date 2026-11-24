@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useTimer } from "@/hooks/use-timer";
-import { useTimerStyle } from "@/hooks/use-timer-style";
+import { useTimerStyle, requestBrowserFullscreen } from "@/hooks/use-timer-style";
 import { useMyRooms } from "@/hooks/use-room";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { addDoc, collection, query, serverTimestamp, where } from "firebase/firestore";
@@ -146,6 +146,15 @@ export default function Timer() {
 
   const activeRoom = rooms[0] ?? null;
 
+  const openFullscreen = useCallback(() => {
+    requestBrowserFullscreen();
+    setFullscreenOpen(true);
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    setFullscreenOpen(false);
+  }, []);
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -161,7 +170,7 @@ export default function Timer() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setFullscreenOpen(true)}
+          onClick={openFullscreen}
           className="min-h-[44px] gap-2 rounded-full border-line bg-surface hover:bg-surface-soft text-ink"
         >
           <Maximize2 className="h-4 w-4" />
@@ -420,7 +429,7 @@ export default function Timer() {
               type="button"
               size="lg"
               variant="outline"
-              onClick={() => setFullscreenOpen(true)}
+              onClick={openFullscreen}
               className="min-h-[48px] rounded-full border-line bg-surface-soft hover:bg-highlight text-ink gap-2"
             >
               <Maximize2 className="h-4 w-4" />
@@ -505,7 +514,7 @@ export default function Timer() {
 
       <FullscreenTimer
         open={isFullscreenOpen}
-        onClose={() => setFullscreenOpen(false)}
+        onClose={closeFullscreen}
         context="personal"
         seconds={displayTime}
         totalSeconds={mode === "pomodoro" ? customDuration * 60 : 0}
@@ -514,6 +523,8 @@ export default function Timer() {
         isRunning={isActive}
         isPaused={isPaused}
         isIdle={isIdle}
+        canControl={Boolean(selectedSubjectId) || !isIdle}
+        readOnlyHint="Create or select a subject on the timer card first"
         onStart={start}
         onPause={pause}
         onResume={start}

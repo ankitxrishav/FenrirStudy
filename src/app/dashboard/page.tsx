@@ -1,496 +1,455 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Activity,
-  TrendingUp,
-  Clock,
-  BarChart3,
-  Calendar,
-  PieChart,
-  Flame,
-  Sun,
-  Moon,
-  AlertCircle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Repeat2,
-  Users,
-  Timer as TimerIcon,
-  ArrowRight,
-} from "lucide-react";
-import { collection, query, where, doc } from "firebase/firestore";
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
-import { Session, User, Subject } from "@/lib/definitions";
-import { useMyRooms } from "@/hooks/use-room";
-import { useDashboardStats } from "@/hooks/use-dashboard-stats";
-import { useHabits } from "@/hooks/use-habits";
-import { calculateUserLevel } from "@/lib/level";
-import { cn } from "@/lib/utils";
-import LoadingScreen from "@/components/app/loading-screen";
 import { Overview } from "@/components/app/dashboard/overview";
 import { RecentSessions } from "@/components/app/dashboard/recent-sessions";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import {
+    Activity,
+    Target,
+    TrendingUp,
+    Zap,
+    Clock,
+    BarChart3,
+    Calendar,
+    PieChart,
+    Flame,
+    Sun,
+    Moon,
+    ZapOff,
+    ArrowUpRight,
+    ArrowDownRight,
+    Repeat2,
+    Users,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { collection, query, where } from "firebase/firestore";
+import { Session, User, Subject } from "@/lib/definitions";
+import { useDoc } from "@/firebase";
+import { useMyRooms } from "@/hooks/use-room";
+import { doc } from "firebase/firestore";
+import LoadingScreen from "@/components/app/loading-screen";
+import { cn } from "@/lib/utils";
+import { useDashboardStats } from "@/hooks/use-dashboard-stats";
+import { motion, AnimatePresence } from "framer-motion";
+import { calculateUserLevel } from "@/lib/level";
+import { useHabits } from "@/hooks/use-habits";
 import { HabitAnalytics } from "@/components/app/dashboard/habit-analytics";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
-type DashboardTab = "overview" | "habits";
+type DashboardTab = 'overview' | 'habits';
 
 function formatDuration(seconds: number) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return "0m";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m`;
+    return "0m";
 }
 
 export default function DashboardPage() {
-  const { user, loading: userLoading } = useUser();
-  const firestore = useFirestore();
-  const router = useRouter();
+    const { user, loading: userLoading } = useUser();
+    const firestore = useFirestore();
+    const router = useRouter();
 
-  const userDocRef = useMemo(
-    () => (user && firestore ? doc(firestore, "users", user.uid) : null),
-    [user, firestore]
-  );
-  const { data: userData } = useDoc<User>(userDocRef);
+    const userDocRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userData } = useDoc<User>(userDocRef);
 
-  const [tab, setTab] = useState<DashboardTab>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("dashboard-tab");
-      return stored === "habits" ? "habits" : "overview";
+    const [tab, setTab] = useState<DashboardTab>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('dashboard-tab');
+            return (stored as DashboardTab) || 'overview';
+        }
+        return 'overview';
+    });
+
+    const handleTabChange = (newTab: DashboardTab) => {
+        setTab(newTab);
+        localStorage.setItem('dashboard-tab', newTab);
+    };
+
+    useEffect(() => {
+        if (!userLoading && !user) {
+            router.push('/login');
+        }
+    }, [user, userLoading, router]);
+
+    const sessionsQuery = useMemo(() => {
+        if (!user || !firestore) return null;
+        return query(collection(firestore, 'sessions'), where('userId', '==', user.uid));
+    }, [user, firestore]);
+
+    const subjectsQuery = useMemo(() => {
+        if (!user || !firestore) return null;
+        return query(collection(firestore, 'subjects'), where('userId', '==', user.uid));
+    }, [user, firestore]);
+
+    const { data: allSessions, loading: sessionsLoading } = useCollection<Session>(sessionsQuery);
+    const { data: allSubjects } = useCollection<Subject>(subjectsQuery);
+
+    const stats = useDashboardStats(allSessions, allSubjects);
+
+    const allTimeSeconds = allSessions?.reduce((acc, s) => acc + s.duration, 0) || 0;
+    const allTimeSessions = allSessions?.length || 0;
+    const userLevel = calculateUserLevel(allTimeSeconds, allTimeSessions);
+
+    // Fetch habits for analytics
+    const { analytics: habitAnalytics } = useHabits(new Date());
+
+    // Fetch rooms for Active Rooms section
+    const { rooms } = useMyRooms();
+
+    if (userLoading || sessionsLoading || !user || !stats) {
+        return <LoadingScreen />;
     }
-    return "overview";
-  });
 
-  const handleTabChange = (newTab: DashboardTab) => {
-    setTab(newTab);
-    localStorage.setItem("dashboard-tab", newTab);
-  };
+    return (
+        <div className="flex-col md:flex relative">
+            <div className="flex-1 space-y-10 p-8 pt-6 max-w-7xl mx-auto w-full">
 
-  useEffect(() => {
-    if (!userLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, userLoading, router]);
-
-  const sessionsQuery = useMemo(() => {
-    if (!user || !firestore) return null;
-    return query(collection(firestore, "sessions"), where("userId", "==", user.uid));
-  }, [user, firestore]);
-
-  const subjectsQuery = useMemo(() => {
-    if (!user || !firestore) return null;
-    return query(collection(firestore, "subjects"), where("userId", "==", user.uid));
-  }, [user, firestore]);
-
-  const { data: allSessions, loading: sessionsLoading } =
-    useCollection<Session>(sessionsQuery);
-  const { data: allSubjects } = useCollection<Subject>(subjectsQuery);
-
-  const stats = useDashboardStats(allSessions, allSubjects);
-  const { analytics: habitAnalytics } = useHabits(new Date());
-  const { rooms } = useMyRooms();
-
-  const allTimeSeconds = allSessions?.reduce((acc, s) => acc + s.duration, 0) || 0;
-  const allTimeSessions = allSessions?.length || 0;
-  const userLevel = calculateUserLevel(allTimeSeconds, allTimeSessions);
-  const streakDays = userData?.streak ?? 0;
-  const firstName = userData?.displayName?.split(" ")[0] || user?.displayName?.split(" ")[0];
-  const primaryRoom = rooms[0] ?? null;
-
-  if (userLoading || sessionsLoading || !user || !stats) {
-    return <LoadingScreen />;
-  }
-
-  return (
-    <div className="space-y-6 pb-8">
-      <div className="rounded-3xl border border-line bg-surface p-5 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div className="space-y-2 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-              Study Overview
-            </span>
-            <span className="font-mono text-[11px] px-2.5 py-0.5 rounded-full border border-line bg-highlight text-ink">
-              Level {userLevel}
-            </span>
-            <span className="font-mono text-[11px] px-2.5 py-0.5 rounded-full border border-line/25 bg-surface-soft text-ink tabular-nums">
-              {streakDays}d streak
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-ink">
-            {firstName ? `Welcome back, ${firstName}` : "Your Study Desk"}
-          </h1>
-          <p className="text-sm text-ink-muted max-w-xl">
-            {stats.insights[0] || "Track your daily study rhythm, subjects, and rooms from one place."}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <Button
-            asChild
-            className="min-h-[44px] rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold gap-2 px-5"
-          >
-            <Link href={primaryRoom ? `/rooms/${primaryRoom.id}` : "/rooms"}>
-              <Users className="h-4 w-4" />
-              <span>{primaryRoom ? `Open ${primaryRoom.name}` : "Join a room"}</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="min-h-[44px] rounded-full border-line bg-surface-soft hover:bg-highlight text-ink gap-2 px-5"
-          >
-            <Link href="/timer">
-              <TimerIcon className="h-4 w-4" />
-              <span>Open Timer</span>
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      <div className="inline-flex rounded-full border border-line bg-surface p-1 gap-1">
-        {(["overview", "habits"] as DashboardTab[]).map((t) => {
-          const active = tab === t;
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => handleTabChange(t)}
-              className={cn(
-                "min-h-[40px] px-5 rounded-full text-sm font-semibold capitalize flex items-center gap-2 transition-colors",
-                active ? "bg-ink text-surface" : "text-ink-muted hover:text-ink"
-              )}
-            >
-              {t === "overview" ? (
-                <PieChart className="h-4 w-4" />
-              ) : (
-                <Repeat2 className="h-4 w-4" />
-              )}
-              <span>{t === "overview" ? "Overview" : "Habits"}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === "overview" ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <Card className="lg:col-span-5 border-line bg-surface flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
-                    Focus Today
-                  </span>
-                  <Clock className="h-4 w-4 text-ink-muted" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div>
-                  <div className="text-4xl sm:text-5xl font-bold tracking-tight tabular-nums text-ink">
-                    {formatDuration(stats.core.timeToday)}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center font-mono text-xs font-semibold px-2.5 py-0.5 rounded-full border border-line",
-                        stats.core.momentum >= 0 ? "bg-highlight text-ink" : "bg-surface-soft text-ink"
-                      )}
-                    >
-                      {stats.core.momentum >= 0 ? (
-                        <ArrowUpRight className="h-3.5 w-3.5 mr-0.5" />
-                      ) : (
-                        <ArrowDownRight className="h-3.5 w-3.5 mr-0.5" />
-                      )}
-                      {Math.abs(Math.round(stats.core.momentum))}% vs last week
-                    </span>
-                    <span className="text-xs text-ink-muted tabular-nums">
-                      {formatDuration(stats.core.timeThisWeek)} this week
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line/15">
-                  <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-ink-muted">
-                      <span>Avg / Active Day</span>
-                      <BarChart3 className="h-3 w-3" />
-                    </div>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
-                      {formatDuration(stats.core.avgTimePerWeek)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-ink-muted">
-                      <span>30d Avg</span>
-                      <Calendar className="h-3 w-3" />
-                    </div>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
-                      {formatDuration(stats.core.avgTimePerMonth)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-ink-muted">
-                      <span>Avg Block</span>
-                      <Activity className="h-3 w-3" />
-                    </div>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
-                      {formatDuration(stats.core.avgSessionDuration)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-ink-muted">
-                      <span>Longest</span>
-                      <Flame className="h-3 w-3" />
-                    </div>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
-                      {formatDuration(stats.core.longestSession)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-7 border-line bg-surface">
-              <CardHeader className="pb-2 border-b border-line/15 flex flex-row items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2 text-ink">
-                    <TrendingUp className="h-4 w-4 text-clay" />
-                    Last 7 Days
-                  </CardTitle>
-                  <p className="text-xs text-ink-muted">Daily study minutes (today highlighted)</p>
-                </div>
-                <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-line/20 bg-surface-soft text-ink-muted">
-                  {stats.behavior.rhythm === "Night Owl" ? (
-                    <Moon className="h-3 w-3 inline mr-1" />
-                  ) : (
-                    <Sun className="h-3 w-3 inline mr-1" />
-                  )}
-                  {stats.behavior.rhythm}
-                </span>
-              </CardHeader>
-              <CardContent className="pt-5">
-                <Overview sessions={allSessions} />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <Card className="lg:col-span-7 border-line bg-surface">
-              <CardHeader className="pb-3 border-b border-line/15 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2 text-ink">
-                    <PieChart className="h-4 w-4 text-clay" />
-                    Subject Balance
-                  </CardTitle>
-                  <p className="text-xs text-ink-muted">Total time and 7-day consistency</p>
-                </div>
-                <Link
-                  href="/subjects"
-                  className="font-mono text-[11px] uppercase tracking-wider text-ink-muted hover:text-ink"
-                >
-                  Manage →
-                </Link>
-              </CardHeader>
-              <CardContent className="pt-5 space-y-5">
-                {stats.subjects.distribution.length === 0 ? (
-                  <p className="text-sm text-ink-muted">
-                    Add subjects to track where your focus hours go.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {stats.subjects.distribution.map((sub, i) => (
-                      <div key={i} className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="h-2.5 w-2.5 rounded-full border border-line/30 shrink-0"
-                              style={{ backgroundColor: sub.color }}
-                            />
-                            <span className="text-sm font-medium text-ink truncate">
-                              {sub.name}
-                            </span>
-                          </div>
-                          <span className="font-mono text-xs tabular-nums text-ink shrink-0">
-                            {formatDuration(sub.totalTime)}
-                          </span>
+                {/* Header Phase */}
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-8">
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex items-center gap-2 text-primary mb-1">
+                                <Activity className="h-5 w-5" />
+                                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Analytics</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <h1 className="text-6xl font-black tracking-tighter text-gradient">
+                                    Dashboard
+                                </h1>
+                                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold shadow-sm border border-primary/20 flex flex-col items-center justify-center translate-y-1">
+                                    <span className="text-[10px] uppercase tracking-wider opacity-80 leading-none mb-1">Level</span>
+                                    <span className="text-2xl leading-none">{userLevel}</span>
+                                </div>
+                            </div>
+                            <p className="text-muted-foreground text-sm mt-3 max-w-sm">Clear analysis of your study habits and focus performance.</p>
                         </div>
-                        <div className="h-2.5 w-full rounded-full border border-line/20 bg-surface-soft overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{
-                              width: `${Math.min(100, Math.max(2, sub.consistency))}%`,
-                              backgroundColor: sub.color,
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                          <span>{sub.sessionCount} sessions</span>
-                          <span>{Math.round(sub.consistency)}% weekly consistency</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {stats.subjects.neglected.length > 0 && (
-                  <div className="rounded-xl border border-line bg-accent-soft/50 p-3.5 flex items-start gap-2.5">
-                    <AlertCircle className="h-4 w-4 text-ink shrink-0 mt-0.5" />
-                    <div className="text-xs text-ink">
-                      <p className="font-semibold">Needs attention</p>
-                      <p className="text-ink-muted">
-                        No recent sessions in {stats.subjects.neglected.join(", ")}.
-                      </p>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-            <Card className="lg:col-span-5 border-line bg-surface flex flex-col">
-              <CardHeader className="pb-3 border-b border-line/15 flex flex-row items-center justify-between">
-                <CardTitle className="text-base font-semibold text-ink">
-                  Recent Sessions
-                </CardTitle>
-                <Link
-                  href="/history"
-                  className="font-mono text-[11px] uppercase tracking-wider text-ink-muted hover:text-ink"
-                >
-                  All History →
-                </Link>
-              </CardHeader>
-              <CardContent className="pt-5 flex-1">
-                <RecentSessions />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <Card className="lg:col-span-8 border-line bg-surface">
-              <CardHeader className="pb-3 border-b border-line/15 flex flex-row items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2 text-ink">
-                    <Calendar className="h-4 w-4 text-clay" />
-                    Hourly Distribution
-                  </CardTitle>
-                  <p className="text-xs text-ink-muted">When you typically study during the day</p>
+                    {/* Layer 5: Personalized Insights (Premium) */}
+                    <div className="flex flex-col gap-3 max-w-sm w-full">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Zap className="h-4 w-4 text-primary fill-primary animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Study Insights</span>
+                        </div>
+                        {stats.insights.map((insight, i) => (
+                            <div key={i} className="relative group overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="glass p-4 rounded-2xl border border-primary/20 flex items-start gap-3 animate-in fade-in slide-in-from-right duration-700 relative z-10" style={{ animationDelay: `${i * 100}ms` }}>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                                    <p className="text-[12px] font-bold leading-relaxed text-foreground/90">{insight}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <span className="font-mono text-[11px] px-2.5 py-1 rounded-full border border-line bg-highlight text-ink">
-                  Peak: {stats.behavior.bestHour.label}
-                </span>
-              </CardHeader>
-              <CardContent className="pt-5">
-                <div className="flex flex-col gap-3 h-[190px] w-full">
-                  <div className="flex-1 flex items-end justify-between gap-1 h-full">
-                    {stats.behavior.hourHeatmap.map((h, i) => {
-                      const maxTotal = stats.behavior.bestHour.total || 1;
-                      const percentageHeight = (h.total / maxTotal) * 100;
-                      const hasData = h.total > 0;
-                      const isPeak = hasData && h.hour === stats.behavior.bestHour.hour;
 
-                      return (
-                        <div
-                          key={i}
-                          title={`${h.label}: ${formatDuration(h.total)}`}
-                          className="flex-1 h-full flex flex-col justify-end"
-                        >
-                          <div
+                {/* Dashboard Tabs */}
+                <div className="flex gap-1 p-1 rounded-2xl bg-secondary/50 border border-border w-fit">
+                    {(['overview', 'habits'] as DashboardTab[]).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => handleTabChange(t)}
                             className={cn(
-                              "w-full rounded-t-sm border",
-                              isPeak
-                                ? "bg-clay border-line"
-                                : hasData
-                                  ? "bg-accent-soft border-line/40"
-                                  : "bg-surface-soft border-line/15"
+                                'relative px-6 py-2 rounded-xl text-sm font-bold capitalize transition-all duration-200 min-w-[120px]',
+                                tab === t ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                             )}
-                            style={{
-                              height: `${Math.max(hasData ? 12 : 6, percentageHeight)}%`,
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-line/15 pt-2">
-                    {[0, 4, 8, 12, 16, 20].map((hour) => (
-                      <div key={hour} className="flex-1 text-center">
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                          {stats.behavior.hourHeatmap[hour].label}
-                        </span>
-                      </div>
+                        >
+                            {tab === t && (
+                                <motion.div
+                                    layoutId="dashboard-tab-bg"
+                                    className="absolute inset-0 rounded-xl bg-primary shadow-md shadow-primary/20"
+                                    transition={{ type: 'spring', bounce: 0.25, duration: 0.4 }}
+                                />
+                            )}
+                            <span className="relative z-10 flex items-center justify-center gap-1.5">
+                                {t === 'overview' ? <PieChart className="h-4 w-4" /> : <Repeat2 className="h-4 w-4" />}
+                                {t}
+                            </span>
+                        </button>
                     ))}
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card className="lg:col-span-4 border-line bg-surface flex flex-col justify-between">
-              <CardHeader className="pb-3 border-b border-line/15 flex flex-row items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2 text-ink">
-                  <Users className="h-4 w-4 text-clay" />
-                  Study Rooms
-                </CardTitle>
-                <Link
-                  href="/rooms"
-                  className="font-mono text-[11px] uppercase tracking-wider text-ink-muted hover:text-ink"
-                >
-                  All →
-                </Link>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-2.5 flex-1">
-                {rooms.length === 0 ? (
-                  <Link
-                    href="/rooms"
-                    className="flex items-center justify-between rounded-xl border border-line/25 bg-surface-soft p-4 text-sm text-ink hover:border-line transition-colors"
-                  >
-                    <span>Join a study room</span>
-                    <ArrowRight className="h-4 w-4 text-ink-muted" />
-                  </Link>
-                ) : (
-                  rooms.slice(0, 3).map((room) => (
-                    <Link
-                      key={room.id}
-                      href={`/rooms/${room.id}`}
-                      className="flex items-center justify-between rounded-xl border border-line/25 bg-surface-soft px-3.5 py-3 hover:border-line transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-ink truncate">
-                          {room.name}
-                        </p>
-                        <p className="font-mono text-[11px] text-ink-muted">
-                          {room.totalMemberCount} member
-                          {room.totalMemberCount !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-ink shrink-0 ml-2" />
-                    </Link>
-                  ))
-                )}
+                <AnimatePresence mode="wait">
+                    {tab === 'overview' ? (
+                        <motion.div
+                            key="overview"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-10"
+                        >
+                            {/* Layer 1: Core Productivity */}
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Focus Today</span>
+                                            <Clock className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.timeToday)}</div>
+                                        <div className="mt-4 flex items-center gap-2">
+                                            <div className={cn(
+                                                "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full",
+                                                stats.core.momentum >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                                            )}>
+                                                {stats.core.momentum >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                                                {Math.abs(Math.round(stats.core.momentum))}%
+                                            </div>
+                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">VS PREV WEEK</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                {stats.insights.length > 0 && (
-                  <div className="pt-2 border-t border-line/15 space-y-1.5">
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                      Notes
-                    </p>
-                    {stats.insights.slice(0, 2).map((insight, idx) => (
-                      <p key={idx} className="text-xs text-ink leading-relaxed">
-                        · {insight}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Daily Avg / Week</span>
+                                            <BarChart3 className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerWeek)}</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 7)</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Daily Avg / Month</span>
+                                            <Calendar className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerMonth)}</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 30)</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Avg Period</span>
+                                            <Activity className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgSessionDuration)}</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Average session</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Max Focus</span>
+                                            <Flame className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.longestSession)}</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Longest session</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Study Rhythm</span>
+                                            {stats.behavior.rhythm === 'Night Owl' ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-black tracking-tighter uppercase text-gradient">{stats.behavior.rhythm}</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-6 uppercase tracking-widest">Your focus rhythm</p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Layer 2: Intelligence & History */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <Card className="lg:col-span-8 glass border-white/10 shadow-2xl p-6 h-fit md:h-[450px]">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+                                                <TrendingUp className="h-4 w-4 text-primary" /> Progress Trend
+                                            </h3>
+                                            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Weekly flow trend</p>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-muted-foreground bg-white/5 px-3 py-1 rounded-md uppercase tracking-widest">Last 168 Hours</div>
+                                    </div>
+                                    <div className="h-[300px]">
+                                        <Overview sessions={stats.core.timeThisWeek > 0 ? allSessions : []} />
+                                    </div>
+                                </Card>
+
+                                <Card className="lg:col-span-4 glass border-white/10 shadow-2xl overflow-hidden flex flex-col h-[450px]">
+                                    <CardHeader className="border-b border-white/5 p-6 bg-white/[0.01]">
+                                        <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Recent Rituals</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-6 overflow-y-auto flex-1 custom-scrollbar text-gradient">
+                                        <RecentSessions />
+                                    </CardContent>
+                                    <div className="p-4 border-t border-white/5 text-center bg-white/[0.01]">
+                                        <button onClick={() => router.push('/history')} className="text-[10px] font-black text-primary uppercase tracking-[0.3em] hover:tracking-[0.4em] transition-all">
+                                            ACCESS TEMPORAL ARCHIVE →
+                                        </button>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Layer 3: Subject Focus */}
+                            <Card className="w-full glass border-white/10 shadow-2xl flex flex-col">
+                                <CardHeader className="border-b border-white/5 p-6">
+                                    <div className="flex items-center gap-2 text-primary mb-1">
+                                        <PieChart className="h-4 w-4" />
+                                        <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Subject Focus</CardTitle>
+                                    </div>
+                                    <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground/40">Subject priority and balance</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                        {stats.subjects.distribution.map((sub, i) => (
+                                            <div key={i} className="space-y-3 group">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                                                        <span className="text-sm font-bold tracking-tight">{sub.name}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">{formatDuration(sub.totalTime)}</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${sub.consistency}%` }}
+                                                        className="h-full rounded-full transition-all duration-1000"
+                                                        style={{ backgroundColor: sub.color }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                                                    <span>Rituals: {sub.sessionCount}</span>
+                                                    <span>Stability: {Math.round(sub.consistency)}%</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {stats.subjects.neglected.length > 0 && (
+                                        <div className="mt-8 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
+                                            <ZapOff className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Balance Alert</p>
+                                                <p className="text-[10px] leading-tight text-amber-500/60 font-medium">
+                                                    {stats.subjects.neglected.join(", ")} {stats.subjects.neglected.length > 1 ? 'have' : 'has'} fallen below the threshold.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Level 3: Time & Behavior Heatmap (Bottom Layer) */}
+                            <Card className="w-full glass border-white/10 shadow-2xl overflow-hidden mt-6">
+                                <CardHeader className="border-b border-white/5 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2 text-primary">
+                                                <Calendar className="h-4 w-4" />
+                                                <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Time Distribution</CardTitle>
+                                            </div>
+                                            <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground/40">Productivity Heatmap by Hour</CardDescription>
+                                        </div>
+                                        <div className="text-[10px] font-black tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">
+                                            Peak: {stats.behavior.bestHour.label}
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8">
+                                    <div className="flex flex-col gap-4 h-[250px] w-full">
+                                        {/* Bar Layer */}
+                                        <div className="flex-1 flex items-end justify-between gap-1 h-full">
+                                            {stats.behavior.hourHeatmap.map((h, i) => {
+                                                const maxTotal = stats.behavior.bestHour.total || 1;
+                                                const percentageHeight = (h.total / maxTotal) * 100;
+                                                const hasData = h.total > 0;
+
+                                                return (
+                                                    <div key={i} className="flex-1 h-full flex flex-col justify-end group/bar">
+                                                        <div
+                                                            className="w-full rounded-t-lg transition-all duration-500 hover:bg-primary shadow-[0_0_20px_rgba(var(--primary),0.2)]"
+                                                            style={{
+                                                                height: `${Math.max(hasData ? 8 : 4, percentageHeight)}%`,
+                                                                backgroundColor: hasData ? `hsl(var(--primary) / ${Math.max(0.2, h.total / maxTotal)})` : 'transparent',
+                                                                border: hasData ? `1px solid hsl(var(--primary) / 0.3)` : '1px dashed hsl(var(--muted-foreground) / 0.1)'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Label Layer (Aligned track) */}
+                                        <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                                            {[0, 4, 8, 12, 16, 20].map((hour) => (
+                                                <div key={hour} className="flex-1 text-center">
+                                                    <span className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-widest">
+                                                        {stats.behavior.hourHeatmap[hour].label}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            {/* Active Rooms */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-primary" />
+                                    <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Active Rooms</h3>
+                                </div>
+                                {rooms.length === 0 ? (
+                                    <Link href="/rooms" className="block">
+                                        <div className="glass border border-white/10 rounded-xl px-5 py-4 text-sm text-muted-foreground hover:border-primary/30 transition-colors">
+                                            Join a study room to stay accountable with others &rarr;
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {rooms.map(room => (
+                                            <div key={room.id} className="glass border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between hover:border-primary/30 transition-colors">
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-sm truncate">{room.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}</p>
+                                                </div>
+                                                <Link href={`/rooms/${room.id}`} className="text-xs font-bold text-primary hover:underline shrink-0 ml-3">
+                                                    Open &rarr;
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="habits"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <HabitAnalytics analytics={habitAnalytics} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
-      ) : (
-        <HabitAnalytics analytics={habitAnalytics} />
-      )}
-    </div>
-  );
+    );
 }

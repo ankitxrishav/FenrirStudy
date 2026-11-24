@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { format } from 'date-fns';
-import { BarChart2, Flame, Target, TrendingUp, Calendar } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import * as React from "react";
+import { format } from "date-fns";
+import { BarChart2, Flame, Target, TrendingUp, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -18,36 +18,42 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { useHabits } from '@/hooks/use-habits';
+} from "recharts";
+import { useHabits } from "@/hooks/use-habits";
 
-// -------------------------------------------------------
-// Stat Card
-// -------------------------------------------------------
-function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub: string }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+}) {
   return (
-    <Card className="glass-card">
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+    <Card className="border-line bg-surface">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted mb-2">
           <span>{label}</span>
           {icon}
         </div>
-        <div className="text-3xl font-black tracking-tighter">{value}</div>
-        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mt-2">{sub}</div>
+        <div className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-ink">
+          {value}
+        </div>
+        <div className="text-xs text-ink-muted mt-1">{sub}</div>
       </CardContent>
     </Card>
   );
 }
 
-// -------------------------------------------------------
-// Heatmap
-// -------------------------------------------------------
-const LEVEL_CLASSES = [
-  'bg-muted',
-  'bg-primary/20',
-  'bg-primary/40',
-  'bg-primary/70',
-  'bg-primary',
+const LEVEL_STYLES = [
+  "bg-surface-muted border-line/15",
+  "bg-accent-soft/50 border-line/25",
+  "bg-accent-soft border-line/35",
+  "bg-clay/65 border-line/60",
+  "bg-clay border-line",
 ];
 
 function HabitHeatmap({ data }: { data: { date: string; level: number }[] }) {
@@ -58,11 +64,14 @@ function HabitHeatmap({ data }: { data: { date: string; level: number }[] }) {
 
   const firstDay = new Date(data[0].date);
   const firstDayOfWeek = firstDay.getDay();
-  for (let i = 0; i < firstDayOfWeek; i++) week.push({ date: '', level: -1 });
+  for (let i = 0; i < firstDayOfWeek; i++) week.push({ date: "", level: -1 });
 
   for (const d of data) {
     week.push(d);
-    if (week.length === 7) { weeks.push(week); week = []; }
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
   }
   if (week.length > 0) weeks.push(week);
 
@@ -73,10 +82,10 @@ function HabitHeatmap({ data }: { data: { date: string; level: number }[] }) {
           {wk.map((d, di) => (
             <div
               key={di}
-              title={d.date || ''}
+              title={d.date || ""}
               className={cn(
-                'h-3 w-3 rounded-sm transition-colors',
-                d.level < 0 ? 'opacity-0' : LEVEL_CLASSES[d.level] ?? 'bg-muted'
+                "h-3.5 w-3.5 rounded-[4px] border",
+                d.level < 0 ? "opacity-0 border-transparent" : LEVEL_STYLES[d.level] ?? LEVEL_STYLES[0]
               )}
             />
           ))}
@@ -86,34 +95,38 @@ function HabitHeatmap({ data }: { data: { date: string; level: number }[] }) {
   );
 }
 
-// -------------------------------------------------------
-// Habit Analytics Component
-// -------------------------------------------------------
-export function HabitAnalytics({ analytics }: { analytics: ReturnType<typeof useHabits>['analytics'] }) {
+export function HabitAnalytics({
+  analytics,
+}: {
+  analytics: ReturnType<typeof useHabits>["analytics"];
+}) {
   if (!analytics) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-32 rounded-2xl bg-muted/40 animate-pulse" />
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-32 rounded-2xl border border-line/20 bg-surface-soft"
+          />
         ))}
       </div>
     );
   }
 
-  const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--muted-foreground) / 0.3)'];
+  const PIE_COLORS = ["var(--accent)", "var(--surface-muted)"];
   const pieData = [
-    { name: 'Completed', value: analytics.todaySummary.completed },
-    { name: 'Missed', value: analytics.todaySummary.missed },
+    { name: "Completed", value: analytics.todaySummary.completed },
+    { name: "Missed", value: analytics.todaySummary.missed },
   ];
 
-  const barData = analytics.dailyCompletions.slice(-7).map(d => ({
-    day: format(new Date(d.date), 'EEE'),
+  const barData = analytics.dailyCompletions.slice(-7).map((d) => ({
+    day: format(new Date(d.date), "EEE"),
     completed: d.count,
     total: d.total,
   }));
 
-  const lineData = analytics.dailyCompletions.slice(-14).map(d => ({
-    date: format(new Date(d.date), 'MMM d'),
+  const lineData = analytics.dailyCompletions.slice(-14).map((d) => ({
+    date: format(new Date(d.date), "MMM d"),
     rate: d.total > 0 ? Math.round((d.count / d.total) * 100) : 0,
   }));
 
@@ -122,59 +135,130 @@ export function HabitAnalytics({ analytics }: { analytics: ReturnType<typeof use
   const bestLongest = streaks.reduce((m, s) => Math.max(m, s.longest), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Summary Cards */}
+    <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={<Target className="h-4 w-4" />} label="Today's Rate"  value={`${analytics.completionRateToday}%`} sub="completion" />
-        <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Weekly Avg" value={`${analytics.weeklyAvgRate}%`}       sub="last 7 days" />
-        <StatCard icon={<Flame className="h-4 w-4" />}     label="Best Streak" value={`${bestCurrent}d`}                  sub={`longest ${bestLongest}d`} />
-        <StatCard icon={<Calendar className="h-4 w-4" />}  label="Today Progress" value={`${analytics.todaySummary.completed}/${analytics.todaySummary.total}`} sub={`${analytics.todaySummary.missed} missed`} />
+        <StatCard
+          icon={<Target className="h-4 w-4" />}
+          label="Today's Rate"
+          value={`${analytics.completionRateToday}%`}
+          sub="completion"
+        />
+        <StatCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Weekly Avg"
+          value={`${analytics.weeklyAvgRate}%`}
+          sub="last 7 days"
+        />
+        <StatCard
+          icon={<Flame className="h-4 w-4" />}
+          label="Best Streak"
+          value={`${bestCurrent}d`}
+          sub={`longest ${bestLongest}d`}
+        />
+        <StatCard
+          icon={<Calendar className="h-4 w-4" />}
+          label="Today Progress"
+          value={`${analytics.todaySummary.completed}/${analytics.todaySummary.total}`}
+          sub={`${analytics.todaySummary.missed} remaining`}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Line Chart */}
-        <Card className="glass border-white/10 shadow-2xl overflow-hidden">
-          <CardHeader className="pb-2 border-b border-white/5">
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              Completion Rate — Last 14 Days
+        <Card className="border-line bg-surface">
+          <CardHeader className="pb-2 border-b border-line/15">
+            <CardTitle className="font-mono text-xs uppercase tracking-[0.14em] flex items-center gap-2 text-ink">
+              <TrendingUp className="h-4 w-4 text-clay" />
+              Completion Rate — 14 Days
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 h-[250px]">
+          <CardContent className="pt-5 h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineData} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.1)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 11 }}
-                  formatter={(v: number) => [`${v}%`, 'Rate']}
+              <LineChart data={lineData} margin={{ top: 6, right: 8, bottom: 0, left: -24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line-subtle)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+                  tickLine={false}
+                  axisLine={false}
                 />
-                <Line type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))' }} activeDot={{ r: 6 }} />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                  formatter={(v: number) => [`${v}%`, "Rate"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="rate"
+                  stroke="var(--accent)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3.5, fill: "var(--accent)", strokeWidth: 1, stroke: "var(--line)" }}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Bar Chart */}
-        <Card className="glass border-white/10 shadow-2xl overflow-hidden">
-          <CardHeader className="pb-2 border-b border-white/5">
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-              <BarChart2 className="h-3.5 w-3.5 text-primary" />
-              Habits Completed — Last 7 Days
+        <Card className="border-line bg-surface">
+          <CardHeader className="pb-2 border-b border-line/15">
+            <CardTitle className="font-mono text-xs uppercase tracking-[0.14em] flex items-center gap-2 text-ink">
+              <BarChart2 className="h-4 w-4 text-clay" />
+              Habits Completed — 7 Days
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 h-[250px]">
+          <CardContent className="pt-5 h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.1)" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 11 }}
+              <BarChart data={barData} margin={{ top: 6, right: 8, bottom: 0, left: -24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line-subtle)" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+                  tickLine={false}
+                  axisLine={false}
                 />
-                <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Completed" />
-                <Bar dataKey="total"     fill="hsl(var(--muted-foreground) / 0.1)" radius={[4, 4, 0, 0]} name="Total" />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--ink-muted)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                />
+                <Bar
+                  dataKey="completed"
+                  fill="var(--accent)"
+                  stroke="var(--line)"
+                  strokeWidth={1}
+                  radius={[5, 5, 0, 0]}
+                  name="Completed"
+                  isAnimationActive={false}
+                />
+                <Bar
+                  dataKey="total"
+                  fill="var(--surface-muted)"
+                  stroke="var(--line)"
+                  strokeWidth={1}
+                  radius={[5, 5, 0, 0]}
+                  name="Total"
+                  isAnimationActive={false}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -182,49 +266,76 @@ export function HabitAnalytics({ analytics }: { analytics: ReturnType<typeof use
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Pie Chart */}
-        <Card className="lg:col-span-4 glass border-white/10 shadow-2xl overflow-hidden h-fit md:h-[350px]">
-          <CardHeader className="pb-2 border-b border-white/5">
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.2em]">Today — Completed vs Missed</CardTitle>
+        <Card className="lg:col-span-4 border-line bg-surface">
+          <CardHeader className="pb-2 border-b border-line/15">
+            <CardTitle className="font-mono text-xs uppercase tracking-[0.14em] text-ink">
+              Today — Split
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 h-[250px] flex flex-col items-center justify-center gap-6">
-            <div className="h-[140px] w-full">
+          <CardContent className="pt-5 flex flex-col items-center justify-center gap-5">
+            <div className="h-[150px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value" strokeWidth={0}>
-                    {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={44}
+                    outerRadius={66}
+                    paddingAngle={3}
+                    dataKey="value"
+                    stroke="var(--line)"
+                    strokeWidth={1}
+                    isAnimationActive={false}
+                  >
+                    {pieData.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i]} />
+                    ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-5">
               {pieData.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full shrink-0" style={{ background: PIE_COLORS[i] }} />
-                  <span className="text-[10px] font-bold uppercase tracking-tight">{d.name}</span>
-                  <span className="text-[10px] text-muted-foreground font-black">{d.value}</span>
+                  <div
+                    className="h-2.5 w-2.5 rounded-full border border-line shrink-0"
+                    style={{ background: PIE_COLORS[i] }}
+                  />
+                  <span className="text-xs font-medium text-ink">{d.name}</span>
+                  <span className="font-mono text-xs text-ink-muted tabular-nums">
+                    {d.value}
+                  </span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Heatmap */}
-        <Card className="lg:col-span-8 glass border-white/10 shadow-2xl overflow-hidden h-fit md:h-[350px]">
-          <CardHeader className="pb-2 border-b border-white/5">
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-primary" />
-              Consistency Heatmap — Last 12 Weeks
+        <Card className="lg:col-span-8 border-line bg-surface">
+          <CardHeader className="pb-2 border-b border-line/15">
+            <CardTitle className="font-mono text-xs uppercase tracking-[0.14em] flex items-center gap-2 text-ink">
+              <Calendar className="h-4 w-4 text-clay" />
+              Consistency Heatmap — 12 Weeks
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-8 overflow-x-auto custom-scrollbar h-[250px] flex items-center">
-            <div className="px-2">
+          <CardContent className="pt-6 overflow-x-auto flex items-center">
+            <div className="px-1">
               <HabitHeatmap data={analytics.heatmapData} />
-              <div className="mt-6 flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              <div className="mt-5 flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
                 <span>Less</span>
                 <div className="flex gap-1">
-                  {LEVEL_CLASSES.map((c, i) => (<div key={i} className={cn("h-2 w-2 rounded-sm", c)} />))}
+                  {LEVEL_STYLES.map((c, i) => (
+                    <div key={i} className={cn("h-2.5 w-2.5 rounded-[3px] border", c)} />
+                  ))}
                 </div>
                 <span>More</span>
               </div>

@@ -1,266 +1,414 @@
-
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Clock, Target, Calendar, ChevronRight, Archive, Edit3, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useEffect, useState, useMemo } from "react";
-import { Subject, Session } from "@/lib/definitions";
-import { useUser, useCollection, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
-import { collection, query, where, doc, updateDoc, serverTimestamp, addDoc, deleteDoc, getDocs } from "firebase/firestore";
+import {
+  Plus,
+  MoreHorizontal,
+  Clock,
+  Target,
+  Calendar,
+  Archive,
+  Edit3,
+  Trash2,
+} from "lucide-react";
+import {
+  collection,
+  query,
+  where,
+  doc,
+  updateDoc,
+  serverTimestamp,
+  addDoc,
+  deleteDoc,
+  getDocs,
+} from "firebase/firestore";
+import { useUser, useCollection, useFirestore } from "@/firebase";
+import { Subject, Session } from "@/lib/definitions";
 import { AddSubjectDialog } from "@/components/app/timer/add-subject-dialog";
 import { EditSubjectDialog } from "@/components/app/timer/edit-subject-dialog";
 import LoadingScreen from "@/components/app/loading-screen";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 function formatDuration(seconds: number) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 export default function SubjectsPage() {
-    const { user, loading: userLoading } = useUser();
-    const router = useRouter();
-    const firestore = useFirestore();
-    const [isAddSubjectOpen, setAddSubjectOpen] = useState(false);
-    const [isEditSubjectOpen, setEditSubjectOpen] = useState(false);
-    const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const { user, loading: userLoading } = useUser();
+  const router = useRouter();
+  const firestore = useFirestore();
 
-    const subjectsQuery = useMemo(() => user && firestore ? query(collection(firestore, 'subjects'), where('userId', '==', user.uid)) : null, [user, firestore]);
-    const { data: subjects, loading: subjectsLoading } = useCollection<Subject>(subjectsQuery);
+  const [isAddSubjectOpen, setAddSubjectOpen] = useState(false);
+  const [isEditSubjectOpen, setEditSubjectOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
 
-    const sessionsQuery = useMemo(() => user && firestore ? query(collection(firestore, 'sessions'), where('userId', '==', user.uid)) : null, [user, firestore]);
-    const { data: allSessions } = useCollection<Session>(sessionsQuery);
+  const subjectsQuery = useMemo(
+    () =>
+      user && firestore
+        ? query(collection(firestore, "subjects"), where("userId", "==", user.uid))
+        : null,
+    [user, firestore]
+  );
+  const { data: subjects, loading: subjectsLoading } =
+    useCollection<Subject>(subjectsQuery);
 
-    const subjectStats = useMemo(() => {
-        if (!subjects || !allSessions) return new Map();
-        const stats = new Map();
-        subjects.forEach(sub => {
-            const subSessions = allSessions.filter(s => s.subjectId === sub.id);
-            const totalTime = subSessions.reduce((acc, s) => acc + s.duration, 0);
-            const lastActive = subSessions.length > 0
-                ? new Date(Math.max(...subSessions.map(s => new Date(s.startTime).getTime())))
-                : null;
-            stats.set(sub.id, { totalTime, lastActive, sessionCount: subSessions.length });
-        });
-        return stats;
-    }, [subjects, allSessions]);
+  const sessionsQuery = useMemo(
+    () =>
+      user && firestore
+        ? query(collection(firestore, "sessions"), where("userId", "==", user.uid))
+        : null,
+    [user, firestore]
+  );
+  const { data: allSessions } = useCollection<Session>(sessionsQuery);
 
-    useEffect(() => {
-        if (!userLoading && !user) {
-            router.push('/login');
-        }
-    }, [user, userLoading, router]);
+  const subjectStats = useMemo(() => {
+    if (!subjects || !allSessions) return new Map();
+    const stats = new Map<
+      string,
+      { totalTime: number; lastActive: Date | null; sessionCount: number }
+    >();
+    subjects.forEach((sub) => {
+      const subSessions = allSessions.filter((s) => s.subjectId === sub.id);
+      const totalTime = subSessions.reduce((acc, s) => acc + s.duration, 0);
+      const lastActive =
+        subSessions.length > 0
+          ? new Date(
+              Math.max(...subSessions.map((s) => new Date(s.startTime).getTime()))
+            )
+          : null;
+      stats.set(sub.id, {
+        totalTime,
+        lastActive,
+        sessionCount: subSessions.length,
+      });
+    });
+    return stats;
+  }, [subjects, allSessions]);
 
-    const handleAddSubject = async (newSubject: Omit<Subject, 'id' | 'archived' | 'userId' | 'createdAt'>) => {
-        if (!user || !firestore) return;
-        try {
-            await addDoc(collection(firestore, "subjects"), {
-                ...newSubject,
-                userId: user.uid,
-                archived: false,
-                createdAt: serverTimestamp(),
-            });
-            setAddSubjectOpen(false);
-        } catch (e) {
-            console.error("Error adding document: ", e);
-        }
-    };
-
-    const handleEditSubject = (subject: Subject) => {
-        setEditingSubject(subject);
-        setEditSubjectOpen(true);
-    };
-
-    const handleUpdateSubject = async (subjectId: string, updates: Partial<Subject>) => {
-        if (!firestore) return;
-        try {
-            const subjectRef = doc(firestore, "subjects", subjectId);
-            await updateDoc(subjectRef, updates);
-            setEditSubjectOpen(false);
-            setEditingSubject(null);
-        } catch (e) {
-            console.error("Error updating document: ", e);
-        }
-    };
-
-    const toggleArchive = async (subject: Subject) => {
-        if (!firestore) return;
-        const subjectRef = doc(firestore, "subjects", subject.id);
-        await updateDoc(subjectRef, {
-            archived: !subject.archived
-        });
-    };
-
-    const handleDeleteSubject = async (subject: Subject) => {
-        if (!firestore) return;
-        if (!confirm("Are you sure you want to permanently delete this subject and all of its associated study sessions? This will affect your dashboard stats.")) return;
-        
-        try {
-            // First, delete all sessions for this subject
-            const sessionsQ = query(collection(firestore, "sessions"), where("subjectId", "==", subject.id));
-            const snapshot = await getDocs(sessionsQ);
-            
-            const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(firestore, "sessions", docSnap.id)));
-            await Promise.all(deletePromises);
-
-            // Then, delete the subject itself
-            const subjectRef = doc(firestore, "subjects", subject.id);
-            await deleteDoc(subjectRef);
-        } catch (e) {
-            console.error("Error deleting subject: ", e);
-        }
-    };
-
-    if (userLoading || subjectsLoading || !user) {
-        return <LoadingScreen />;
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push("/login");
     }
+  }, [user, userLoading, router]);
 
-    const activeSubjects = subjects?.filter(s => !s.archived) || [];
-    const archivedSubjects = subjects?.filter(s => s.archived) || [];
+  const handleAddSubject = async (
+    newSubject: Omit<Subject, "id" | "archived" | "userId" | "createdAt">
+  ) => {
+    if (!user || !firestore) return;
+    await addDoc(collection(firestore, "subjects"), {
+      ...newSubject,
+      userId: user.uid,
+      archived: false,
+      createdAt: serverTimestamp(),
+    });
+    setAddSubjectOpen(false);
+  };
 
-    return (
-        <div className="container mx-auto p-4 md:p-8 space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-gradient mb-2">Subjects</h1>
-                    <p className="text-muted-foreground">Manage your study categories and track your progress.</p>
-                </div>
-                <Button onClick={() => setAddSubjectOpen(true)} className="shadow-lg hover:scale-105 transition-all">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Subject
-                </Button>
-            </div>
+  const handleEditSubject = (subject: Subject) => {
+    setEditingSubject(subject);
+    setEditSubjectOpen(true);
+  };
 
-            <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-primary" />
-                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground">Active Subjects</h2>
-                </div>
+  const handleUpdateSubject = async (
+    subjectId: string,
+    updates: Partial<Subject>
+  ) => {
+    if (!firestore) return;
+    await updateDoc(doc(firestore, "subjects", subjectId), updates);
+    setEditSubjectOpen(false);
+    setEditingSubject(null);
+  };
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {activeSubjects.length > 0 ? activeSubjects.map((subject) => {
-                        const stats = subjectStats.get(subject.id);
-                        return (
-                            <Card key={subject.id} className="group glass border-white/10 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative">
-                                <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03] group-hover:scale-110 transition-transform -mr-8 -mt-8 rounded-full" style={{ backgroundColor: subject.color }} />
+  const toggleArchive = async (subject: Subject) => {
+    if (!firestore) return;
+    await updateDoc(doc(firestore, "subjects", subject.id), {
+      archived: !subject.archived,
+    });
+  };
 
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-4 w-4 rounded-full shadow-lg" style={{ backgroundColor: subject.color }} />
-                                            <div>
-                                                <CardTitle className="text-xl">{subject.name}</CardTitle>
-                                                <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                                    <Badge variant="outline" className="text-[10px] uppercase font-bold py-0 h-4 border-primary/20 bg-primary/5">
-                                                        {subject.priority || 'MEDIUM'}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground relative z-10">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="glass border-white/10">
-                                                <DropdownMenuLabel>Manage Subject</DropdownMenuLabel>
-                                                <DropdownMenuSeparator className="bg-white/5" />
-                                                <DropdownMenuItem onClick={() => handleEditSubject(subject)} className="gap-2">
-                                                    <Edit3 className="h-4 w-4" /> Edit Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => toggleArchive(subject)} className="gap-2 text-amber-500">
-                                                    <Archive className="h-4 w-4" /> Archive Subject
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator className="bg-white/5" />
-                                                <DropdownMenuItem onClick={() => handleDeleteSubject(subject)} className="gap-2 text-red-500">
-                                                    <Trash2 className="h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </CardHeader>
-
-                                <CardContent className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-white/5 dark:bg-black/20 p-3 rounded-lg border border-white/5">
-                                            <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground mb-1">
-                                                <Clock className="h-3 w-3" /> Total Focus
-                                            </div>
-                                            <div className="text-lg font-bold">{formatDuration(stats?.totalTime || 0)}</div>
-                                        </div>
-                                        <div className="bg-white/5 dark:bg-black/20 p-3 rounded-lg border border-white/5">
-                                            <div className="flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground mb-1">
-                                                <Target className="h-3 w-3" /> Sessions
-                                            </div>
-                                            <div className="text-lg font-bold">{stats?.sessionCount || 0}</div>
-                                        </div>
-                                    </div>
-
-                                    {stats?.lastActive && (
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-white/5">
-                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Last Active</span>
-                                            <span className="font-medium text-foreground">{stats.lastActive.toLocaleDateString()}</span>
-                                        </div>
-                                    )}
-                                </CardContent>
-
-                                <div className="absolute bottom-0 left-0 w-full h-1 opacity-20" style={{ backgroundColor: subject.color }} />
-                            </Card>
-                        )
-                    }) : (
-                        <div className="col-span-full py-12 text-center glass border-dashed border-2 border-white/10 rounded-xl">
-                            <p className="text-muted-foreground">No active subjects. Start by adding one!</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {archivedSubjects.length > 0 && (
-                <div className="space-y-4 pt-8">
-                    <div className="flex items-center gap-2">
-                        <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Archived</h2>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-                        {archivedSubjects.map((subject) => (
-                            <Card key={subject.id} className="glass opacity-60 hover:opacity-100 transition-opacity border-white/5">
-                                <CardContent className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
-                                        <span className="text-sm font-medium">{subject.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="sm" onClick={() => toggleArchive(subject)} className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider">
-                                            UNARCHIVE
-                                        </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteSubject(subject)} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <AddSubjectDialog
-                isOpen={isAddSubjectOpen}
-                onOpenChange={setAddSubjectOpen}
-                onAddSubject={handleAddSubject}
-            />
-            <EditSubjectDialog
-                isOpen={isEditSubjectOpen}
-                onOpenChange={setEditSubjectOpen}
-                onUpdateSubject={handleUpdateSubject}
-                subject={editingSubject}
-            />
-        </div>
+  const confirmDeleteSubject = async () => {
+    if (!firestore || !deletingSubject) return;
+    const target = deletingSubject;
+    setDeletingSubject(null);
+    const sessionsQ = query(
+      collection(firestore, "sessions"),
+      where("subjectId", "==", target.id)
     );
+    const snapshot = await getDocs(sessionsQ);
+    await Promise.all(
+      snapshot.docs.map((docSnap) =>
+        deleteDoc(doc(firestore, "sessions", docSnap.id))
+      )
+    );
+    await deleteDoc(doc(firestore, "subjects", target.id));
+  };
+
+  if (userLoading || subjectsLoading || !user) {
+    return <LoadingScreen />;
+  }
+
+  const activeSubjects = subjects?.filter((s) => !s.archived) || [];
+  const archivedSubjects = subjects?.filter((s) => s.archived) || [];
+
+  return (
+    <div className="space-y-7 pb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            Curriculum
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">Subjects</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
+            Organize focus time across courses and priorities.
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          onClick={() => setAddSubjectOpen(true)}
+          className="min-h-[44px] rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold gap-2 px-5"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Subject</span>
+        </Button>
+      </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-ink-muted">
+            Active ({activeSubjects.length})
+          </h2>
+        </div>
+
+        {activeSubjects.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {activeSubjects.map((subject) => {
+              const stats = subjectStats.get(subject.id);
+              const priority = subject.priority || "medium";
+
+              return (
+                <Card
+                  key={subject.id}
+                  className="border-line bg-surface rounded-2xl overflow-hidden"
+                >
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="h-4 w-4 rounded-full border border-line shrink-0"
+                          style={{ backgroundColor: subject.color }}
+                        />
+                        <div className="min-w-0">
+                          <h3 className="text-base font-semibold text-ink truncate">
+                            {subject.name}
+                          </h3>
+                          <span
+                            className={cn(
+                              "inline-block mt-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                              priority === "high"
+                                ? "bg-highlight border-line text-ink"
+                                : "bg-surface-soft border-line/20 text-ink-muted"
+                            )}
+                          >
+                            {priority} priority
+                          </span>
+                        </div>
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Actions for ${subject.name}`}
+                            className="h-9 w-9 rounded-full text-ink-muted hover:text-ink"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditSubject(subject)}
+                            className="gap-2"
+                          >
+                            <Edit3 className="h-4 w-4" /> Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => toggleArchive(subject)}
+                            className="gap-2"
+                          >
+                            <Archive className="h-4 w-4" /> Archive Subject
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeletingSubject(subject)}
+                            className="gap-2 text-danger focus:text-danger"
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                          <Clock className="h-3 w-3" /> Focus
+                        </div>
+                        <div className="text-lg font-bold tabular-nums text-ink mt-0.5">
+                          {formatDuration(stats?.totalTime || 0)}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-line/15 bg-surface-soft p-3">
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                          <Target className="h-3 w-3" /> Sessions
+                        </div>
+                        <div className="text-lg font-bold tabular-nums text-ink mt-0.5">
+                          {stats?.sessionCount || 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-ink-muted pt-2 border-t border-line/15">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" /> Last session
+                      </span>
+                      <span className="font-mono text-ink">
+                        {stats?.lastActive ? stats.lastActive.toLocaleDateString() : "None yet"}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border-dashed border-line/40 bg-surface rounded-2xl">
+            <CardContent className="py-12 text-center space-y-3">
+              <p className="text-sm text-ink-muted">
+                No active subjects yet. Create one to begin tracking focus blocks.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddSubjectOpen(true)}
+                className="rounded-full border-line"
+              >
+                Add first subject
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      {archivedSubjects.length > 0 && (
+        <section className="space-y-3 pt-4 border-t border-line/15">
+          <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-ink-muted">
+            Archived ({archivedSubjects.length})
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {archivedSubjects.map((subject) => (
+              <div
+                key={subject.id}
+                className="flex items-center justify-between gap-2 rounded-2xl border border-line/20 bg-surface-soft px-4 py-3"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className="h-3 w-3 rounded-full border border-line/30 shrink-0"
+                    style={{ backgroundColor: subject.color }}
+                  />
+                  <span className="text-sm font-medium text-ink truncate">
+                    {subject.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleArchive(subject)}
+                    className="h-8 text-xs rounded-full"
+                  >
+                    Restore
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeletingSubject(subject)}
+                    aria-label={`Delete ${subject.name}`}
+                    className="h-8 w-8 text-danger hover:text-danger"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <AddSubjectDialog
+        isOpen={isAddSubjectOpen}
+        onOpenChange={setAddSubjectOpen}
+        onAddSubject={handleAddSubject}
+      />
+      <EditSubjectDialog
+        isOpen={isEditSubjectOpen}
+        onOpenChange={setEditSubjectOpen}
+        onUpdateSubject={handleUpdateSubject}
+        subject={editingSubject}
+      />
+
+      <AlertDialog
+        open={!!deletingSubject}
+        onOpenChange={(open) => {
+          if (!open) setDeletingSubject(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deletingSubject?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes this subject and all of its logged study sessions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSubject}
+              className="bg-danger text-surface hover:bg-danger/90"
+            >
+              Delete Subject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }

@@ -1,10 +1,17 @@
+"use client";
 
-"use client"
-
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, Area, AreaChart } from "recharts"
+import { useMemo } from "react";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+} from "recharts";
 import { Session } from "@/lib/definitions";
-import { useMemo } from 'react';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays, startOfDay } from "date-fns";
 
 interface OverviewProps {
   sessions: Session[] | null;
@@ -12,82 +19,83 @@ interface OverviewProps {
 
 export function Overview({ sessions }: OverviewProps) {
   const data = useMemo(() => {
+    const today = startOfDay(new Date());
     const weeklyData = Array.from({ length: 7 }).map((_, i) => {
-      const date = startOfDay(subDays(new Date(), 6 - i));
+      const date = startOfDay(subDays(today, 6 - i));
       return {
-        name: format(date, 'E'), // "Mon", "Tue", etc.
+        name: format(date, "EEE"),
+        fullDate: format(date, "MMM d"),
         date,
+        isToday: i === 6,
         total: 0,
       };
     });
 
     if (sessions) {
-      sessions.forEach(session => {
+      sessions.forEach((session) => {
         const sessionDayStart = startOfDay(new Date(session.startTime));
-        const dayData = weeklyData.find(d => d.date.getTime() === sessionDayStart.getTime());
+        const dayData = weeklyData.find(
+          (d) => d.date.getTime() === sessionDayStart.getTime()
+        );
         if (dayData) {
-          dayData.total += session.duration; // duration in seconds
+          dayData.total += session.duration;
         }
       });
     }
 
-    return weeklyData.map(d => {
+    return weeklyData.map((d) => {
       const totalMinutes = Math.round(d.total / 60);
       const h = Math.floor(totalMinutes / 60);
       const m = totalMinutes % 60;
       return {
         name: d.name,
+        fullDate: d.fullDate,
+        isToday: d.isToday,
         total: totalMinutes,
-        formatted: h > 0 ? `${h}h ${m}m` : `${m}m`
+        formatted: h > 0 ? `${h}h ${m}m` : `${m}m`,
       };
     });
   }, [sessions]);
 
-
   if (!sessions) {
     return (
-      <div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="text-muted-foreground animate-pulse">Loading charts...</div>
+      <div className="h-[260px] flex items-center justify-center text-sm text-ink-muted">
+        Loading chart...
       </div>
-    )
+    );
   }
 
   return (
-    <div className="h-[350px] w-full mt-4">
+    <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-          <defs>
-            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-            </linearGradient>
-          </defs>
+        <BarChart data={data} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
           <XAxis
             dataKey="name"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
+            stroke="var(--ink-muted)"
+            fontSize={11}
             tickLine={false}
-            axisLine={false}
-            dy={10}
+            axisLine={{ stroke: "var(--line-subtle)" }}
+            dy={6}
           />
           <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
+            stroke="var(--ink-muted)"
+            fontSize={11}
             tickLine={false}
             axisLine={false}
             tickFormatter={(value) => `${value}m`}
           />
           <Tooltip
-            cursor={{ fill: 'hsl(var(--primary)/0.1)', radius: 8 }}
+            cursor={{ fill: "rgba(36, 32, 27, 0.05)" }}
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
+                const row = payload[0].payload as (typeof data)[number];
                 return (
-                  <div className="glass px-3 py-2 rounded-lg border-white/10 shadow-xl">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      {payload[0].payload.name}
+                  <div className="rounded-xl border border-line bg-surface px-3 py-2 text-ink">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                      {row.name} · {row.fullDate}
                     </p>
-                    <p className="text-sm font-bold text-foreground">
-                      {payload[0].payload.formatted}
+                    <p className="font-mono text-sm font-semibold tabular-nums">
+                      {row.formatted}
                     </p>
                   </div>
                 );
@@ -97,14 +105,21 @@ export function Overview({ sessions }: OverviewProps) {
           />
           <Bar
             dataKey="total"
-            fill="url(#barGradient)"
-            radius={[6, 6, 0, 0]}
-            barSize={32}
-            animationDuration={1500}
-            animationEasing="ease-out"
-          />
+            radius={[8, 8, 2, 2]}
+            maxBarSize={36}
+            isAnimationActive={false}
+          >
+            {data.map((entry, idx) => (
+              <Cell
+                key={`day-${idx}`}
+                fill={entry.isToday ? "var(--accent)" : "var(--surface-muted)"}
+                stroke="var(--line)"
+                strokeWidth={1}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
-  )
+  );
 }

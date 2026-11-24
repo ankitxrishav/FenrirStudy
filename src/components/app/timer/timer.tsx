@@ -1,31 +1,64 @@
-
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { useTimer, type TimerFaceId } from '@/hooks/use-timer';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { PlusCircle, Settings2, Users } from 'lucide-react';
-import { AddSubjectDialog } from './add-subject-dialog';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { addDoc, collection, query, serverTimestamp, where } from 'firebase/firestore';
-import { useMyRooms } from '@/hooks/use-room';
-import { Input } from '@/components/ui/input';
-import type { Subject } from '@/lib/definitions';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import { TimerDisplay } from './timer-display';
-import { TimerControls } from './timer-controls';
-import { Card, CardContent } from '@/components/ui/card';
-import { StyleSelector } from './style-selector';
+import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Play,
+  Pause,
+  Square,
+  RotateCcw,
+  Plus,
+  Maximize2,
+  Users,
+  ArrowRight,
+  Clock,
+} from "lucide-react";
+import { useTimer } from "@/hooks/use-timer";
+import { useTimerStyle } from "@/hooks/use-timer-style";
+import { useMyRooms } from "@/hooks/use-room";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { addDoc, collection, query, serverTimestamp, where } from "firebase/firestore";
+import type { Subject, TimerFaceStyle } from "@/lib/definitions";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AddSubjectDialog } from "./add-subject-dialog";
+import { TimerPresentation } from "./timer-presentation";
 
+const FullscreenTimer = dynamic(
+  () => import("./fullscreen-timer").then((m) => m.FullscreenTimer),
+  { ssr: false }
+);
 
-const modeSettings: { [key in 'pomodoro' | 'stopwatch']: { label: string } } = {
-  pomodoro: { label: 'Pomodoro' },
-  stopwatch: { label: 'Stopwatch' },
-};
+const PRESET_DURATIONS = [15, 25, 45, 60];
+
+const TIMER_STYLES: { id: TimerFaceStyle; label: string }[] = [
+  { id: "flip", label: "Flip" },
+  { id: "digital", label: "Digital" },
+  { id: "minimal", label: "Minimal" },
+  { id: "progress", label: "Ring" },
+];
 
 export default function Timer() {
   const { user } = useUser();
@@ -34,10 +67,20 @@ export default function Timer() {
   const { toast } = useToast();
 
   const [isAddSubjectOpen, setAddSubjectOpen] = useState(false);
+  const [isFullscreenOpen, setFullscreenOpen] = useState(false);
+  const [isResetDialogOpen, setResetDialogOpen] = useState(false);
+
   const { rooms, loading: roomsLoading } = useMyRooms();
+  const { timerStyle, setTimerStyle } = useTimerStyle();
 
   const subjectsQuery = useMemo(() => {
-    return user && firestore ? query(collection(firestore, 'subjects'), where('userId', '==', user.uid), where('archived', '==', false)) : null;
+    return user && firestore
+      ? query(
+          collection(firestore, "subjects"),
+          where("userId", "==", user.uid),
+          where("archived", "==", false)
+        )
+      : null;
   }, [user, firestore]);
   const { data: subjects, loading: subjectsLoading } = useCollection<Subject>(subjectsQuery);
 
@@ -57,20 +100,27 @@ export default function Timer() {
     handleSubjectChange,
     handleDurationChange,
     setSelectedSubjectId,
-    activeFace
   } = useTimer();
+
+  useEffect(() => {
+    if (isIdle && !selectedSubjectId && subjects && subjects.length > 0) {
+      handleSubjectChange(subjects[0].id);
+    }
+  }, [isIdle, selectedSubjectId, subjects, handleSubjectChange]);
 
   const selectedSubject = useMemo(() => {
     if (!subjects || !selectedSubjectId) return null;
-    return subjects.find(s => s.id === selectedSubjectId) || null;
+    return subjects.find((s) => s.id === selectedSubjectId) || null;
   }, [subjects, selectedSubjectId]);
 
-  const handleAddSubject = async (newSubject: Omit<Subject, 'id' | 'archived' | 'userId' | 'createdAt'>) => {
+  const handleAddSubject = async (
+    newSubject: Omit<Subject, "id" | "archived" | "userId" | "createdAt">
+  ) => {
     if (!user) {
       toast({
-        title: 'Please Log In',
-        description: 'You need to be logged in to add subjects.',
-        action: <Button onClick={() => router.push('/login')}>Login</Button>
+        title: "Please Sign In",
+        description: "You need an account to create study subjects.",
+        action: <Button onClick={() => router.push("/login")}>Sign In</Button>,
       });
       return;
     }
@@ -81,120 +131,395 @@ export default function Timer() {
         ...newSubject,
         userId: user.uid,
         archived: false,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       setSelectedSubjectId(docRef.id);
       setAddSubjectOpen(false);
-    } catch (e) {
-      console.error("Error adding document: ", e);
+    } catch {
       toast({
-        title: 'Error',
-        description: 'Could not add subject.',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: "Could not add subject.",
+        variant: "destructive",
+      });
     }
   };
 
+  const activeRoom = rooms[0] ?? null;
+
   return (
-    <>
-      <Card className="w-full max-w-lg border-2 shadow-lg">
-        <CardContent className="p-6 md:p-8 flex flex-col items-center justify-center gap-8">
+    <div className="w-full max-w-2xl mx-auto space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            Personal Session
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">
+            Focus Timer
+          </h1>
+        </div>
 
-          <Tabs value={mode} onValueChange={(val) => handleModeChange(val as 'pomodoro' | 'stopwatch')} className="w-full max-w-xs">
-            <TabsList className={cn("grid w-full grid-cols-2", !isIdle && "pointer-events-none opacity-50")}>
-              {Object.entries(modeSettings).map(([key, value]) => (
-                <TabsTrigger key={key} value={key} disabled={!isIdle}>
-                  {value.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setFullscreenOpen(true)}
+          className="min-h-[44px] gap-2 rounded-full border-line bg-surface hover:bg-surface-soft text-ink"
+        >
+          <Maximize2 className="h-4 w-4" />
+          <span>Full-screen</span>
+        </Button>
+      </div>
 
-          <div className="flex flex-col items-center gap-2 w-full">
-            <TimerDisplay
-              time={displayTime}
-              face={activeFace}
-              mode={mode}
-              isActive={isActive}
-              initialDuration={mode === 'pomodoro' ? customDuration * 60 : 0}
-              color={selectedSubject?.color}
-            />
-            <div className="flex gap-2 items-center w-full max-w-xs">
-              <Select onValueChange={handleSubjectChange} disabled={!isIdle || !user} value={selectedSubjectId || ""}>
-                <SelectTrigger className="shadow-sm">
-                  <SelectValue placeholder={user ? (subjectsLoading ? "Loading..." : "Select subject") : "Login to select subject"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {user && subjects && subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }}></span>
-                        {subject.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={() => setAddSubjectOpen(true)} disabled={!isIdle} className="shadow-sm flex-shrink-0">
-                <PlusCircle className="h-4 w-4" />
-              </Button>
+      <Card className="border-line bg-surface rounded-3xl">
+        <CardContent className="p-5 sm:p-8 space-y-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div
+              role="group"
+              aria-label="Timer mode"
+              className="inline-flex rounded-full border border-line bg-surface-soft p-1"
+            >
+              {(["pomodoro", "stopwatch"] as const).map((m) => {
+                const active = mode === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => handleModeChange(m)}
+                    className={cn(
+                      "min-h-[40px] px-4 rounded-full text-xs sm:text-sm font-semibold capitalize transition-colors",
+                      active
+                        ? "bg-ink text-surface"
+                        : "text-ink-muted hover:text-ink",
+                      !isIdle && !active && "opacity-45 cursor-not-allowed"
+                    )}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              role="group"
+              aria-label="Clock style"
+              className="inline-flex flex-wrap rounded-full border border-line/25 bg-surface-soft p-1 gap-0.5"
+            >
+              {TIMER_STYLES.map((s) => {
+                const active = timerStyle === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setTimerStyle(s.id)}
+                    className={cn(
+                      "min-h-[36px] px-3 rounded-full font-mono text-[11px] font-medium transition-colors",
+                      active
+                        ? "bg-highlight text-ink border border-line"
+                        : "text-ink-muted hover:text-ink"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {mode === 'pomodoro' && (
-            <div className='flex items-center justify-center gap-2'>
-              <label htmlFor="custom-duration" className='text-sm font-medium text-muted-foreground'>Duration:</label>
-              <Input
-                id="custom-duration"
-                type="number"
-                value={customDuration}
-                onChange={(e) => handleDurationChange(Number(e.target.value))}
-                className="w-20 h-9"
-                disabled={!isIdle}
-              />
-              <span className="text-sm text-muted-foreground">min</span>
-            </div>
-          )}
+          <div className="py-2 sm:py-4 flex flex-col items-center justify-center">
+            <TimerPresentation
+              seconds={displayTime}
+              totalSeconds={mode === "pomodoro" ? customDuration * 60 : 0}
+              styleId={timerStyle}
+              modeLabel={mode === "pomodoro" ? "Pomodoro Focus" : "Open Stopwatch"}
+              contextLabel={selectedSubject?.name || undefined}
+              isRunning={isActive}
+              isPaused={isPaused}
+              size="embedded"
+            />
+          </div>
 
-          <TimerControls
-            isActive={isActive}
-            isPaused={isPaused}
-            onStart={start}
-            onPause={pause}
-            onStop={() => stop('stopped')}
-            onReset={reset}
-          />
+          <div className="space-y-3 border-t border-line/15 pt-5">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+              <div className="space-y-1.5 min-w-0">
+                <label className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+                  Subject
+                </label>
+                <div className="flex gap-2 items-center">
+                  <Select
+                    onValueChange={handleSubjectChange}
+                    disabled={!isIdle || !user}
+                    value={selectedSubjectId || ""}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl border-line/30 bg-surface-soft text-ink">
+                      <SelectValue
+                        placeholder={
+                          user
+                            ? subjectsLoading
+                              ? "Loading subjects..."
+                              : "Select subject"
+                            : "Sign in to select subject"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {user &&
+                        subjects &&
+                        subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2.5 w-2.5 rounded-full shrink-0 border border-line/30"
+                                style={{ backgroundColor: subject.color }}
+                              />
+                              <span className="truncate">{subject.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAddSubjectOpen(true)}
+                    disabled={!isIdle}
+                    title="Add subject"
+                    aria-label="Add subject"
+                    className="h-11 px-3.5 rounded-xl border-line/30 bg-surface-soft shrink-0 gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline text-xs font-medium">New</span>
+                  </Button>
+                </div>
+              </div>
 
-          {user && (
-            <div className="w-full border-t border-white/5 pt-4 mt-2 flex flex-col items-center">
-              {roomsLoading ? (
-                <div className="text-xs text-muted-foreground animate-pulse">Loading study rooms...</div>
-              ) : rooms.length > 0 ? (
-                <Button
-                  onClick={() => router.push(`/rooms/${rooms[0].id}`)}
-                  className="w-full max-w-xs gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  variant="outline"
-                >
-                  <Users className="h-4 w-4" /> Go to {rooms[0].name} Room
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => router.push('/rooms')}
-                  className="w-full max-w-xs gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  variant="secondary"
-                >
-                  <Users className="h-4 w-4" /> Join or Create a Study Room
-                </Button>
+              {mode === "pomodoro" && (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="custom-duration"
+                    className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted block"
+                  >
+                    Minutes
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4 text-ink-muted shrink-0" />
+                    <Input
+                      id="custom-duration"
+                      type="number"
+                      min={1}
+                      max={240}
+                      value={customDuration}
+                      onChange={(e) => handleDurationChange(Number(e.target.value))}
+                      className="w-24 h-11 rounded-xl border-line/30 bg-surface-soft font-mono tabular-nums text-center"
+                      disabled={!isIdle}
+                    />
+                  </div>
+                </div>
               )}
             </div>
-          )}
+
+            {user && !subjectsLoading && subjects && subjects.length === 0 && (
+              <div className="rounded-xl border border-line bg-accent-soft/50 px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs text-ink">
+                <span>Create a subject before starting a focus session.</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setAddSubjectOpen(true)}
+                  className="bg-clay text-ink border border-line shrink-0 h-8"
+                >
+                  Add subject
+                </Button>
+              </div>
+            )}
+
+            {mode === "pomodoro" && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted mr-1">
+                  Presets:
+                </span>
+                {PRESET_DURATIONS.map((mins) => {
+                  const selected = customDuration === mins;
+                  return (
+                    <button
+                      key={mins}
+                      type="button"
+                      disabled={!isIdle}
+                      onClick={() => handleDurationChange(mins)}
+                      className={cn(
+                        "min-h-[36px] px-3.5 rounded-full font-mono text-xs border transition-colors",
+                        selected
+                          ? "bg-highlight border-line text-ink font-semibold"
+                          : "bg-surface-soft border-line/20 text-ink-muted hover:border-line hover:text-ink",
+                        !isIdle && "opacity-45 cursor-not-allowed"
+                      )}
+                    >
+                      {mins}m
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {isIdle ? (
+              <Button
+                type="button"
+                size="lg"
+                onClick={start}
+                className="min-h-[48px] min-w-[168px] rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold gap-2"
+              >
+                <Play className="h-4 w-4 fill-current" />
+                <span>Start Focus</span>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={isActive ? pause : start}
+                  className="min-h-[48px] min-w-[140px] rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold gap-2"
+                >
+                  {isActive ? (
+                    <>
+                      <Pause className="h-4 w-4" />
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 fill-current" />
+                      <span>Resume</span>
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => stop("stopped")}
+                  className="min-h-[48px] rounded-full border-line bg-surface hover:bg-surface-soft text-ink gap-2"
+                >
+                  <Square className="h-4 w-4" />
+                  <span>Finish & Save</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="ghost"
+                  onClick={() => setResetDialogOpen(true)}
+                  className="min-h-[48px] rounded-full text-ink-muted hover:text-danger gap-1.5"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              </>
+            )}
+
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              onClick={() => setFullscreenOpen(true)}
+              className="min-h-[48px] rounded-full border-line bg-surface-soft hover:bg-highlight text-ink gap-2"
+            >
+              <Maximize2 className="h-4 w-4" />
+              <span>Full-screen timer</span>
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {user && (
+        <div className="rounded-2xl border border-line bg-surface px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 rounded-xl border border-line/20 bg-surface-soft flex items-center justify-center shrink-0">
+              <Users className="h-4 w-4 text-ink" />
+            </div>
+            <div className="min-w-0">
+              {roomsLoading ? (
+                <p className="text-xs text-ink-muted">Checking active rooms...</p>
+              ) : activeRoom ? (
+                <>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">
+                    Active Room Preserved
+                  </p>
+                  <p className="text-sm font-semibold text-ink truncate">
+                    {activeRoom.name}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-ink">Study with others</p>
+                  <p className="text-xs text-ink-muted">
+                    Join or create a room for shared timers and chat.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {!roomsLoading && (
+            <Button
+              asChild
+              variant="outline"
+              className="min-h-[40px] rounded-full border-line bg-surface-soft hover:bg-highlight text-ink gap-1.5 shrink-0"
+            >
+              <Link href={activeRoom ? `/rooms/${activeRoom.id}` : "/rooms"}>
+                <span>{activeRoom ? "Return to room" : "Browse rooms"}</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
+
       <AddSubjectDialog
         isOpen={isAddSubjectOpen}
         onOpenChange={setAddSubjectOpen}
         onAddSubject={handleAddSubject}
       />
-    </>
+
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset active timer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the current elapsed time without saving it as a completed session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                reset();
+                setResetDialogOpen(false);
+              }}
+              className="bg-danger text-surface hover:bg-danger/90"
+            >
+              Reset Timer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <FullscreenTimer
+        open={isFullscreenOpen}
+        onClose={() => setFullscreenOpen(false)}
+        context="personal"
+        seconds={displayTime}
+        totalSeconds={mode === "pomodoro" ? customDuration * 60 : 0}
+        modeLabel={mode === "pomodoro" ? "Pomodoro" : "Stopwatch"}
+        contextLabel={selectedSubject?.name || "Personal Focus"}
+        isRunning={isActive}
+        isPaused={isPaused}
+        isIdle={isIdle}
+        onStart={start}
+        onPause={pause}
+        onResume={start}
+        onStop={() => stop("stopped")}
+        onReset={reset}
+      />
+    </div>
   );
 }

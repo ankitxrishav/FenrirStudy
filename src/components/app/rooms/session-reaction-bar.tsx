@@ -71,10 +71,10 @@ export function SessionReactionBar({ session, roomId }: SessionReactionBarProps)
             key={emoji}
             onClick={() => handleClick(emoji)}
             className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border transition-all duration-150 active:scale-90",
+              "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border transition-colors active:scale-95",
               isOwn
-                ? "bg-primary/20 border-primary/40 text-foreground"
-                : "bg-white/5 border-white/10 text-muted-foreground hover:border-white/20"
+                ? "bg-highlight border-line text-ink"
+                : "bg-surface-soft border-line/20 text-ink-muted hover:border-line/60 hover:text-ink"
             )}
           >
             <span>{emoji}</span>

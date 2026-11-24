@@ -7,11 +7,12 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Users, Copy, ExternalLink, Crown } from "lucide-react";
+import { Plus, Users, Copy, ArrowUpRight, Crown, Flame } from "lucide-react";
 import LoadingScreen from "@/components/app/loading-screen";
 import { CreateRoomDialog } from "@/components/app/rooms/create-room-dialog";
 import { JoinRoomDialog } from "@/components/app/rooms/join-room-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { setActiveRoomCookie } from "@/lib/routing-cookies";
 
 export default function RoomsPage() {
   const { user, loading: userLoading } = useUser();
@@ -23,11 +24,12 @@ export default function RoomsPage() {
   const [isJoinOpen, setIsJoinOpen] = useState(false);
 
   useEffect(() => {
-    if (!userLoading && !user) router.push("/login");
+    if (!userLoading && !user) router.replace("/login");
   }, [user, userLoading, router]);
 
   useEffect(() => {
     if (!roomsLoading && rooms.length === 1) {
+      setActiveRoomCookie(rooms[0].id);
       router.replace(`/rooms/${rooms[0].id}`);
     }
   }, [rooms, roomsLoading, router]);
@@ -37,120 +39,131 @@ export default function RoomsPage() {
   const handleCopyCode = (code: string) => {
     if (navigator.share) {
       navigator
-        .share({ title: "Join my study room!", text: `Join my study room! Code: ${code}` })
+        .share({ title: "Join my study room", text: `Join my study room. Code: ${code}` })
         .catch((err: unknown) => {
-          // AbortError = user dismissed the share sheet — not a real error
           if (err instanceof Error && err.name !== "AbortError") {
-            toast({ title: "Code copied!", description: code });
+            navigator.clipboard?.writeText(code);
+            toast({ title: "Room code copied", description: code });
           }
         });
     } else {
       navigator.clipboard.writeText(code);
-      toast({ title: "Code copied!", description: code });
+      toast({ title: "Room code copied", description: code });
     }
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 py-2">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-gradient mb-2">Rooms</h1>
-          <p className="text-muted-foreground">Study together. Stay accountable.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-line/15 pb-6">
+        <div className="space-y-1.5">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+            Shared study space
+          </span>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-ink leading-[1.04]">
+            Study Rooms
+          </h1>
+          <p className="text-sm text-ink-muted">
+            Return to a quiet room with peers and keep your daily focus cadence steady.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsJoinOpen(true)}>
-            <Users className="mr-2 h-4 w-4" /> Join Room
+
+        <div className="flex flex-wrap gap-2.5">
+          <Button variant="outline" onClick={() => setIsJoinOpen(true)} className="h-11">
+            <Users className="h-4 w-4" strokeWidth={1.75} />
+            Join with code
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)} className="shadow-lg hover:scale-105 transition-all">
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Room
+          <Button onClick={() => setIsCreateOpen(true)} className="h-11">
+            <Plus className="h-4 w-4" strokeWidth={1.75} />
+            Create room
           </Button>
         </div>
       </div>
 
-      {/* Section label */}
-      <div className="flex items-center gap-2">
-        <div className="h-1 w-1 rounded-full bg-primary" />
-        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          My Rooms
-        </h2>
-      </div>
-
-      {/* Rooms grid */}
+      {/* Empty State or Rooms Grid */}
       {rooms.length === 0 ? (
-        <div className="py-20 text-center glass border-dashed border-2 border-white/10 rounded-xl flex flex-col items-center gap-4">
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-30">
-            <circle cx="24" cy="24" r="10" fill="currentColor" />
-            <circle cx="40" cy="24" r="10" fill="currentColor" />
-            <ellipse cx="24" cy="46" rx="14" ry="7" fill="currentColor" />
-            <ellipse cx="40" cy="46" rx="14" ry="7" fill="currentColor" />
-          </svg>
-          <p className="text-muted-foreground text-lg">No rooms yet. Create one or join with a code.</p>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsJoinOpen(true)}>Join with code</Button>
-            <Button onClick={() => setIsCreateOpen(true)}>Create room</Button>
+        <div className="rounded-[22px] border border-line bg-surface-soft p-8 sm:p-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-3 max-w-md">
+            <span className="inline-flex items-center rounded-full border border-line bg-highlight px-3 py-0.5 font-mono text-[11px] text-ink">
+              NO ACTIVE ROOM
+            </span>
+            <h2 className="text-3xl font-bold tracking-tight text-ink">Study with someone.</h2>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              Create a private study room for your group or join with a 6-character invite code. Once joined, opening the app brings you right back here.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <Button variant="outline" onClick={() => setIsJoinOpen(true)} className="h-11 px-5">
+              Join with code
+            </Button>
+            <Button onClick={() => setIsCreateOpen(true)} className="h-11 px-5">
+              Create room
+            </Button>
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {rooms.map(room => (
-            <Card
-              key={room.id}
-              className="group glass border-white/10 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden relative"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.04] group-hover:scale-110 transition-transform -mr-6 -mt-6 rounded-full bg-primary" />
-
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {rooms.map((room) => (
+            <Card key={room.id} className="flex flex-col justify-between bg-surface">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{room.name}</CardTitle>
+                    <CardTitle className="text-lg font-semibold truncate">{room.name}</CardTitle>
                     {room.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{room.description}</p>
+                      <p className="text-xs text-ink-muted mt-1 line-clamp-2">{room.description}</p>
                     )}
                   </div>
                   {user.uid === room.ownerId && (
-                    <Badge variant="secondary" className="shrink-0 gap-1 text-[10px] uppercase font-bold">
-                      <Crown className="h-2.5 w-2.5" /> Owner
+                    <Badge variant="highlight" className="shrink-0 gap-1">
+                      <Crown className="h-3 w-3" strokeWidth={1.75} />
+                      Owner
                     </Badge>
                   )}
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Room code */}
-                <div className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between rounded-md border border-line/30 bg-surface-soft px-3 py-2">
                   <div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Invite Code</div>
-                    <span className="font-mono font-bold tracking-[0.2em] text-sm">{room.code}</span>
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                      Invite Code
+                    </div>
+                    <span className="font-mono text-sm font-semibold tracking-[0.16em] text-ink">
+                      {room.code}
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9"
                     onClick={() => handleCopyCode(room.code)}
+                    aria-label="Copy room code"
                   >
-                    <Copy className="h-3.5 w-3.5" />
+                    <Copy className="h-4 w-4" strokeWidth={1.75} />
                   </Button>
                 </div>
 
-                {/* Stats row */}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" />
-                    <span>{room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}</span>
+                <div className="flex items-center justify-between text-xs text-ink-muted">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    <span>
+                      {room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}
+                    </span>
                   </span>
                   {(room.collectiveStreak ?? 0) > 0 && (
-                    <span className="text-xs font-semibold text-orange-400">
-                      🔥 {room.collectiveStreak}d streak
+                    <span className="inline-flex items-center gap-1 font-mono font-medium text-ink">
+                      <Flame className="h-3.5 w-3.5 text-clay" strokeWidth={1.75} />
+                      {room.collectiveStreak}d streak
                     </span>
                   )}
                 </div>
 
                 <Button
-                  className="w-full gap-2"
+                  className="w-full justify-between"
                   onClick={() => router.push(`/rooms/${room.id}`)}
                 >
-                  <ExternalLink className="h-4 w-4" /> Open Room
+                  <span>Open room</span>
+                  <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} />
                 </Button>
               </CardContent>
             </Card>
@@ -161,12 +174,12 @@ export default function RoomsPage() {
       <CreateRoomDialog
         isOpen={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onCreated={roomId => router.push(`/rooms/${roomId}`)}
+        onCreated={(roomId) => router.push(`/rooms/${roomId}`)}
       />
       <JoinRoomDialog
         isOpen={isJoinOpen}
         onOpenChange={setIsJoinOpen}
-        onJoined={roomId => router.push(`/rooms/${roomId}`)}
+        onJoined={(roomId) => router.push(`/rooms/${roomId}`)}
       />
     </div>
   );

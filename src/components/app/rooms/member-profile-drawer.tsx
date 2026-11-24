@@ -30,10 +30,10 @@ function formatDuration(s: number) {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="glass border border-white/10 rounded-xl p-3 flex flex-col gap-1">
-      <div className="text-muted-foreground">{icon}</div>
-      <p className="text-xl font-black tabular-nums">{value}</p>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{label}</p>
+    <div className="rounded-[12px] border border-line bg-surface-soft p-3.5 flex flex-col gap-1">
+      <div className="text-ink-muted">{icon}</div>
+      <p className="text-xl font-bold font-mono timer-digit text-ink">{value}</p>
+      <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">{label}</p>
     </div>
   );
 }
@@ -45,14 +45,16 @@ export function MemberProfileDrawer({ member, onClose }: MemberProfileDrawerProp
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!member || !firestore) { setSessions([]); return; }
+    if (!member || !firestore) {
+      setSessions([]);
+      return;
+    }
 
     setLoading(true);
     const fetchData = async () => {
       try {
         const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-        // Recent sessions (last 10)
         const recentSnap = await getDocs(
           query(
             collection(firestore, "sessions"),
@@ -61,16 +63,14 @@ export function MemberProfileDrawer({ member, onClose }: MemberProfileDrawerProp
             limit(10)
           )
         );
-        const recentSessions = recentSnap.docs.map(d => ({ id: d.id, ...d.data() } as Session));
-        setSessions(recentSessions);
+        setSessions(recentSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Session)));
 
-        // All-time total
         const allSnap = await getDocs(
           query(collection(firestore, "sessions"), where("userId", "==", member.userId))
         );
         let allTime = 0;
         let weekTime = 0;
-        allSnap.docs.forEach(d => {
+        allSnap.docs.forEach((d) => {
           const data = d.data();
           allTime += data.duration ?? 0;
           if (new Date(data.startTime) >= weekStart) weekTime += data.duration ?? 0;
@@ -89,122 +89,114 @@ export function MemberProfileDrawer({ member, onClose }: MemberProfileDrawerProp
   const timerRunning = member?.timerStatus === "running";
 
   return (
-    <Sheet open={!!member} onOpenChange={open => !open && onClose()}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-md bg-background/80 backdrop-blur-2xl border-l border-white/10 overflow-y-auto"
-      >
+    <Sheet open={!!member} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-md border-l border-line bg-surface overflow-y-auto">
         <SheetHeader className="pb-0">
           <SheetTitle className="sr-only">Member Profile</SheetTitle>
         </SheetHeader>
 
         {member && (
-          <div className="space-y-6 py-2">
-            {/* Hero */}
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <div className="space-y-6 py-4">
+            <div className="flex flex-col items-center gap-3 py-4 text-center border-b border-line/15">
               <div className="relative">
-                <Avatar className="h-20 w-20 ring-2 ring-white/10">
+                <Avatar className="h-20 w-20 border border-line">
                   <AvatarImage src={member.photoURL} />
-                  <AvatarFallback className="text-xl font-black">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-surface-soft font-mono text-xl font-semibold text-ink">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <span
                   className={cn(
-                    "absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-background",
-                    timerRunning ? "bg-green-500 animate-pulse" :
-                    member.timerStatus === "paused" ? "bg-yellow-500" :
-                    "bg-muted-foreground/30"
+                    "absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border border-line",
+                    timerRunning
+                      ? "bg-success"
+                      : member.timerStatus === "paused"
+                        ? "bg-highlight"
+                        : "bg-surface-muted"
                   )}
                 />
               </div>
               <div>
-                <h2 className="text-lg font-black">{member.displayName}</h2>
-                {timerRunning && member.subjectName && (
+                <h2 className="text-xl font-bold text-ink">{member.displayName}</h2>
+                {timerRunning && member.subjectName ? (
                   <div className="flex items-center gap-1.5 justify-center mt-1">
-                    <div
+                    <span
                       className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: member.subjectColor ?? "hsl(var(--primary))" }}
+                      style={{ backgroundColor: member.subjectColor ?? "var(--accent)" }}
                     />
-                    <span className="text-xs text-muted-foreground">Studying {member.subjectName}</span>
+                    <span className="text-xs text-ink-muted">Studying {member.subjectName}</span>
                   </div>
-                )}
-                {!timerRunning && (
-                  <Badge variant="outline" className="text-[10px] mt-1">
-                    {member.timerStatus === "paused" ? "⏸ Paused" : "Idle"}
+                ) : (
+                  <Badge variant="secondary" className="mt-1.5">
+                    {member.timerStatus === "paused" ? "Paused" : "Idle"}
                   </Badge>
                 )}
               </div>
             </div>
 
-            {/* Stats grid */}
             {loading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="glass border border-white/10 rounded-xl p-3 h-20 animate-pulse" />
+                  <div key={i} className="rounded-[12px] border border-line/20 bg-surface-soft h-20 animate-pulse" />
                 ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
-                  icon={<TrendingUp className="h-3.5 w-3.5" />}
+                  icon={<TrendingUp className="h-4 w-4" strokeWidth={1.75} />}
                   label="All time"
                   value={formatDuration(stats.allTime)}
                 />
                 <StatCard
-                  icon={<Zap className="h-3.5 w-3.5" />}
+                  icon={<Zap className="h-4 w-4" strokeWidth={1.75} />}
                   label="This week"
                   value={formatDuration(stats.thisWeek)}
                 />
                 <StatCard
-                  icon={<BookOpen className="h-3.5 w-3.5" />}
+                  icon={<BookOpen className="h-4 w-4" strokeWidth={1.75} />}
                   label="Sessions"
                   value={String(stats.sessionCount)}
                 />
                 <StatCard
-                  icon={<Clock className="h-3.5 w-3.5" />}
+                  icon={<Clock className="h-4 w-4" strokeWidth={1.75} />}
                   label="Avg session"
-                  value={stats.sessionCount > 0 ? formatDuration(Math.round(stats.allTime / stats.sessionCount)) : "—"}
+                  value={
+                    stats.sessionCount > 0
+                      ? formatDuration(Math.round(stats.allTime / stats.sessionCount))
+                      : "—"
+                  }
                 />
               </div>
             )}
 
-            {/* Recent sessions */}
-            <div className="space-y-2">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">
+            <div className="space-y-2.5">
+              <h3 className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
                 Recent Sessions
               </h3>
               {loading ? (
                 <div className="space-y-2">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="glass border border-white/10 rounded-xl p-3 h-14 animate-pulse" />
+                    <div key={i} className="rounded-[12px] border border-line/20 bg-surface-soft h-14 animate-pulse" />
                   ))}
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="glass border border-white/10 rounded-xl p-6 text-center">
-                  <p className="text-sm text-muted-foreground">No sessions yet</p>
+                <div className="rounded-[12px] border border-line/25 bg-surface-soft p-6 text-center text-sm text-ink-muted">
+                  No sessions recorded yet
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {sessions.map(session => (
-                    <div
-                      key={session.id}
-                      className="glass border border-white/10 rounded-xl p-3 flex items-center justify-between gap-3"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">
+                <div className="rounded-[14px] border border-line bg-surface divide-y divide-line/15 overflow-hidden">
+                  {sessions.map((session) => (
+                    <div key={session.id} className="p-3.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold font-mono timer-digit text-ink">
                           {formatDuration(session.duration ?? 0)}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-ink-muted">
                           {formatDistanceToNow(new Date(session.startTime), { addSuffix: true })}
                         </p>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] shrink-0",
-                          session.status === "completed" ? "text-green-400 border-green-400/30" : "text-muted-foreground"
-                        )}
-                      >
-                        {session.status === "completed" ? "✓ Done" : "Stopped"}
+                      <Badge variant={session.status === "completed" ? "highlight" : "secondary"}>
+                        {session.status === "completed" ? "Completed" : "Stopped"}
                       </Badge>
                     </div>
                   ))}

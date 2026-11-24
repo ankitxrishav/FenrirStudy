@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { CHAT_THEMES, ChatThemeId } from "@/hooks/use-room-theme";
 import { Check } from "lucide-react";
-import { motion } from "framer-motion";
 
 interface RoomThemePickerProps {
   current: ChatThemeId;
@@ -11,102 +10,86 @@ interface RoomThemePickerProps {
 }
 
 export function RoomThemePicker({ current, onChange }: RoomThemePickerProps) {
+  const activeTheme = CHAT_THEMES.find((t) => t.id === current) ?? CHAT_THEMES[0];
+
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm font-bold">Chat Theme</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Changes the chat background & bubble colors — just for you.
+        <p className="text-sm font-semibold text-ink">Chat Palette</p>
+        <p className="text-xs text-ink-muted mt-0.5">
+          Sets the chat paper tint and outgoing message tone for this room.
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {CHAT_THEMES.map((t) => {
           const isActive = current === t.id;
           return (
-            <motion.button
+            <button
               key={t.id}
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.96 }}
+              type="button"
               onClick={() => onChange(t.id)}
               className={cn(
-                "relative flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all duration-200 overflow-hidden",
+                "relative flex flex-col items-start gap-2 p-2.5 rounded-xl border text-left transition-colors min-h-[44px]",
                 isActive
-                  ? "border-white/30 shadow-lg"
-                  : "border-white/10 hover:border-white/20"
+                  ? "border-line bg-highlight/60"
+                  : "border-line/20 bg-surface-soft hover:border-line/50"
               )}
-              style={{
-                background: isActive
-                  ? `${t.swatch}, rgba(255,255,255,0.03)`
-                  : "rgba(255,255,255,0.03)",
-              }}
             >
-              {/* Gradient swatch (simulates chat background glimpse) */}
               <div
-                className="w-full h-10 rounded-xl relative overflow-hidden"
-                style={{
-                  background: t.id === "default"
-                    ? "rgba(255,255,255,0.05)"
-                    : t.chatBg,
-                }}
+                className="w-full h-9 rounded-lg border border-line/15 relative overflow-hidden bg-surface"
               >
-                {/* Mini bubbles inside */}
                 <div
-                  className="absolute right-2 bottom-2 w-5 h-5 rounded-full"
-                  style={{ background: t.ownBubbleBg, opacity: 0.9 }}
+                  className="absolute inset-0"
+                  style={{ background: t.chatBg }}
                 />
                 <div
-                  className="absolute left-2 top-2 w-5 h-5 rounded-full"
-                  style={{ background: "rgba(255,255,255,0.12)" }}
+                  className="absolute left-2 top-2 h-2.5 w-8 rounded-full bg-surface-muted border border-line/15"
+                />
+                <div
+                  className="absolute right-2 bottom-2 h-2.5 w-9 rounded-full border border-line/20"
+                  style={{ background: t.swatch }}
                 />
               </div>
 
-              {/* Emoji + Label */}
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-base leading-none">{t.emoji}</span>
-                <span className={cn(
-                  "text-[10px] font-bold leading-none",
-                  isActive ? "text-white" : "text-white/50"
-                )}>
+              <div className="flex items-center justify-between w-full px-0.5">
+                <span className={cn("text-xs font-medium", isActive ? "text-ink" : "text-ink-muted")}>
                   {t.label}
                 </span>
+                {isActive && (
+                  <span className="h-4 w-4 rounded-full border border-line bg-surface flex items-center justify-center">
+                    <Check className="h-2.5 w-2.5 text-ink" />
+                  </span>
+                )}
               </div>
-
-              {/* Active check */}
-              {isActive && (
-                <motion.div
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-white flex items-center justify-center shadow-md"
-                >
-                  <Check className="h-2.5 w-2.5 text-black" />
-                </motion.div>
-              )}
-            </motion.button>
+            </button>
           );
         })}
       </div>
 
-      {/* Live preview strip */}
-      <div className="rounded-2xl overflow-hidden border border-white/8 p-4 space-y-2"
-        style={{ background: current === "default" ? "rgba(255,255,255,0.03)" : CHAT_THEMES.find(t => t.id === current)?.chatBg ?? "transparent" }}>
-        <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Preview</p>
-        {/* Other person's bubble */}
-        <div className="flex items-end gap-2">
-          <div className="h-6 w-6 rounded-full bg-white/10 shrink-0" />
-          <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-xs text-white/80 max-w-[60%]"
-            style={{ background: "rgba(255,255,255,0.09)", backdropFilter: "blur(8px)" }}>
-            Let&apos;s study 🎯
+      <div className="rounded-2xl overflow-hidden border border-line bg-surface">
+        <div className="p-4 space-y-2.5" style={{ background: activeTheme.chatBg }}>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-muted">Preview</p>
+          <div className="flex items-end gap-2">
+            <div className="h-6 w-6 rounded-full border border-line/20 bg-surface-soft shrink-0" />
+            <div className="px-3 py-2 rounded-2xl rounded-tl-sm border border-line/20 bg-surface-soft text-xs text-ink max-w-[70%]">
+              Starting a 25m focus block now.
+            </div>
           </div>
-        </div>
-        {/* Own bubble */}
-        <div className="flex items-end gap-2 flex-row-reverse">
-          <div className="h-6 w-6 rounded-full shrink-0" style={{ background: CHAT_THEMES.find(t => t.id === current)?.ownBubbleBg ?? "#3b82f6" }} />
-          <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-xs max-w-[60%] font-medium"
-            style={{
-              background: CHAT_THEMES.find(t => t.id === current)?.ownBubbleBg ?? "hsl(var(--primary))",
-              color: CHAT_THEMES.find(t => t.id === current)?.ownBubbleText ?? "#fff",
-            }}>
-            Ready! 💪🔥
+          <div className="flex items-end gap-2 flex-row-reverse">
+            <div
+              className="h-6 w-6 rounded-full border border-line shrink-0"
+              style={{ background: activeTheme.ownBubbleBg }}
+            />
+            <div
+              className="px-3 py-2 rounded-2xl rounded-tr-sm border border-line text-xs max-w-[70%] font-medium"
+              style={{
+                background: activeTheme.ownBubbleBg,
+                color: activeTheme.ownBubbleText,
+              }}
+            >
+              Joined. See you at break.
+            </div>
           </div>
         </div>
       </div>

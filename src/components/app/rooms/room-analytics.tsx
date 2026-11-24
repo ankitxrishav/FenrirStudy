@@ -28,11 +28,11 @@ interface SubjectData {
 }
 
 function getHeatLevel(hours: number): string {
-  if (hours === 0) return "bg-white/5";
-  if (hours < 1) return "bg-primary/20";
-  if (hours < 3) return "bg-primary/40";
-  if (hours < 6) return "bg-primary/60";
-  return "bg-primary/90";
+  if (hours === 0) return "bg-surface-muted";
+  if (hours < 1) return "bg-clay/25";
+  if (hours < 3) return "bg-clay/50";
+  if (hours < 6) return "bg-clay/75";
+  return "bg-clay";
 }
 
 export function RoomAnalytics({ members }: RoomAnalyticsProps) {
@@ -42,9 +42,12 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!firestore || members.length === 0) { setLoading(false); return; }
+    if (!firestore || members.length === 0) {
+      setLoading(false);
+      return;
+    }
 
-    const memberIds = members.map(m => m.userId).filter(Boolean) as string[];
+    const memberIds = members.map((m) => m.userId).filter(Boolean) as string[];
     const chunks: string[][] = [];
     for (let i = 0; i < memberIds.length; i += 30) chunks.push(memberIds.slice(i, i + 30));
 
@@ -55,31 +58,25 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
         const allSessions: { startTime: string; duration: number; subjectId: string }[] = [];
         const subjectsMap = new Map<string, { name: string; color: string }>();
 
-        // Fetch subjects for all members in chunks
         await Promise.all(
-          chunks.map(async chunk => {
+          chunks.map(async (chunk) => {
             const [subSnap, sessSnap] = await Promise.all([
-              getDocs(
-                query(
-                  collection(firestore, "subjects"),
-                  where("userId", "in", chunk)
-                )
-              ),
+              getDocs(query(collection(firestore, "subjects"), where("userId", "in", chunk))),
               getDocs(
                 query(
                   collection(firestore, "sessions"),
                   where("userId", "in", chunk),
                   where("startTime", ">=", startOfDay(since84).toISOString())
                 )
-              )
+              ),
             ]);
 
-            subSnap.docs.forEach(d => {
+            subSnap.docs.forEach((d) => {
               const data = d.data();
               subjectsMap.set(d.id, { name: data.name, color: data.color });
             });
 
-            sessSnap.docs.forEach(d => {
+            sessSnap.docs.forEach((d) => {
               const data = d.data();
               allSessions.push({
                 startTime: data.startTime,
@@ -90,29 +87,32 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
           })
         );
 
-        // Build 84-day heatmap
         const days = eachDayOfInterval({ start: since84, end: new Date() });
         const dayMap = new Map<string, number>();
-        days.forEach(d => dayMap.set(format(d, "yyyy-MM-dd"), 0));
+        days.forEach((d) => dayMap.set(format(d, "yyyy-MM-dd"), 0));
 
-        allSessions.forEach(s => {
+        allSessions.forEach((s) => {
           const key = format(new Date(s.startTime), "yyyy-MM-dd");
           dayMap.set(key, (dayMap.get(key) ?? 0) + s.duration);
         });
 
-        setDayData(days.map(d => ({
-          date: format(d, "yyyy-MM-dd"),
-          totalSeconds: dayMap.get(format(d, "yyyy-MM-dd")) ?? 0,
-        })));
+        setDayData(
+          days.map((d) => ({
+            date: format(d, "yyyy-MM-dd"),
+            totalSeconds: dayMap.get(format(d, "yyyy-MM-dd")) ?? 0,
+          }))
+        );
 
-        // Subject breakdown
         const subjectMap = new Map<string, number>();
-        allSessions.forEach(s => {
+        allSessions.forEach((s) => {
           subjectMap.set(s.subjectId, (subjectMap.get(s.subjectId) ?? 0) + s.duration);
         });
         const sorted = Array.from(subjectMap.entries())
           .map(([subjectId, totalSeconds]) => {
-            const subInfo = subjectsMap.get(subjectId) ?? { name: "Other Subject", color: "hsl(var(--primary))" };
+            const subInfo = subjectsMap.get(subjectId) ?? {
+              name: "Other Subject",
+              color: "var(--accent)",
+            };
             return {
               subjectId,
               totalSeconds,
@@ -130,10 +130,8 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
     fetchAnalytics();
   }, [firestore, members]);
 
-  // Build 12-week grid (12 cols × 7 rows)
   const grid = useMemo(() => {
     if (dayData.length === 0) return [];
-    // Pad to 84 days, split into weeks
     const weeks: DayData[][] = [];
     for (let i = 0; i < dayData.length; i += 7) {
       weeks.push(dayData.slice(i, i + 7));
@@ -142,36 +140,36 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
   }, [dayData]);
 
   const totalAll = subjectData.reduce((s, d) => s + d.totalSeconds, 0) || 1;
-
   const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {loading ? (
-        <p className="text-center text-muted-foreground text-sm py-8">Loading analytics…</p>
+        <p className="text-center text-ink-muted text-sm py-8">Loading analytics...</p>
       ) : (
         <>
-          {/* Heatmap */}
-          <Card id="analytics-panel" className="glass border-white/10 shadow-xl">
-            <CardHeader className="pb-3 border-b border-white/5">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart2 className="h-4 w-4 text-primary" />
+          <Card id="analytics-panel" className="border-line bg-surface">
+            <CardHeader className="pb-3 border-b border-line/15">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
+                <BarChart2 className="h-4 w-4 text-clay" strokeWidth={1.75} />
                 Room Activity (12 weeks)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 overflow-x-auto">
               <TooltipProvider>
-                <div className="flex gap-1">
-                  {/* Day labels */}
-                  <div className="flex flex-col gap-1 mr-1">
+                <div className="flex gap-1.5">
+                  <div className="flex flex-col gap-1.5 mr-1">
                     {DAY_LABELS.map((d, i) => (
-                      <div key={i} className="h-3 w-3 flex items-center justify-center text-[8px] text-muted-foreground/50">
+                      <div
+                        key={i}
+                        className="h-3.5 w-3 flex items-center justify-center font-mono text-[9px] text-ink-muted"
+                      >
                         {i % 2 === 0 ? d : ""}
                       </div>
                     ))}
                   </div>
                   {grid.map((week, wi) => (
-                    <div key={wi} className="flex flex-col gap-1">
+                    <div key={wi} className="flex flex-col gap-1.5">
                       {week.map((day, di) => {
                         const hours = day.totalSeconds / 3600;
                         return (
@@ -179,13 +177,15 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "h-3 w-3 rounded-sm cursor-default transition-opacity hover:opacity-80",
+                                  "h-3.5 w-3.5 rounded-[3px] border border-line/15 cursor-default",
                                   getHeatLevel(hours)
                                 )}
                               />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">{hours.toFixed(1)}h — {day.date}</p>
+                              <p className="font-mono text-xs">
+                                {hours.toFixed(1)}h — {day.date}
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -197,35 +197,39 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
             </CardContent>
           </Card>
 
-          {/* Subject breakdown */}
           {subjectData.length > 0 && (
-            <Card className="glass border-white/10 shadow-xl">
-              <CardHeader className="pb-3 border-b border-white/5">
-                <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider">Subject Breakdown</CardTitle>
+            <Card className="border-line bg-surface">
+              <CardHeader className="pb-3 border-b border-line/15">
+                <CardTitle className="font-mono text-xs uppercase tracking-wider text-ink-muted">
+                  Subject Breakdown
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {/* Stacked bar */}
-                <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
+                <div className="flex h-3.5 rounded-full border border-line/30 overflow-hidden gap-0.5 bg-surface-soft">
                   {subjectData.map((s) => {
                     const pct = (s.totalSeconds / totalAll) * 100;
                     return (
                       <div
                         key={s.subjectId}
                         className="h-full"
-                        style={{ width: `${pct}%`, backgroundColor: s.color || "hsl(var(--primary))" }}
+                        style={{ width: `${pct}%`, backgroundColor: s.color || "var(--accent)" }}
                       />
                     );
                   })}
                 </div>
-                {/* Legend */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {subjectData.map((s) => {
                     const hours = (s.totalSeconds / 3600).toFixed(1);
                     return (
                       <div key={s.subjectId} className="flex items-center gap-1.5 text-xs">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color || "hsl(var(--primary))" }} />
-                        <span className="text-muted-foreground">{s.name}</span>
-                        <span className="font-semibold">{hours}h</span>
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: s.color || "var(--accent)" }}
+                        />
+                        <span className="text-ink-muted">{s.name}</span>
+                        <span className="font-mono font-semibold text-ink timer-digit">
+                          {hours}h
+                        </span>
                       </div>
                     );
                   })}

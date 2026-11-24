@@ -75,10 +75,10 @@ export const RoomSessionFeed = memo(function RoomSessionFeed({ roomId, members }
   }, [firestore, members, memberMap]);
 
   return (
-    <Card className="glass border-white/10 shadow-xl">
-      <CardHeader className="pb-3 border-b border-white/5">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
+    <Card className="border-line bg-surface">
+      <CardHeader className="pb-3 border-b border-line/15">
+        <CardTitle className="text-base flex items-center gap-2 text-ink">
+          <Activity className="h-4 w-4 text-clay" />
           Activity Feed
         </CardTitle>
       </CardHeader>

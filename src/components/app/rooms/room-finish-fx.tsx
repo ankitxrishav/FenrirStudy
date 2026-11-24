@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RoomMember } from '@/lib/definitions';
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
+import { RoomMember } from "@/lib/definitions";
 
 interface RoomFinishFxProps {
   members: RoomMember[];
@@ -11,25 +12,26 @@ interface RoomFinishFxProps {
 
 function playChime() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    const notes = [523.25, 659.25, 783.99, 1046.5];
 
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'sine';
+      osc.type = "sine";
       osc.frequency.value = freq;
-      const t = ctx.currentTime + i * 0.15;
+      const t = ctx.currentTime + i * 0.14;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.18, t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
       osc.start(t);
-      osc.stop(t + 0.7);
+      osc.stop(t + 0.65);
     });
   } catch {
-    // AudioContext may be blocked before user interaction — silent fail
+    // Silent fail if blocked before interaction
   }
 }
 
@@ -38,10 +40,8 @@ export function RoomFinishFx({ members, currentUserId }: RoomFinishFxProps) {
   const [showEffect, setShowEffect] = useState<{ name: string; isCurrentUser: boolean } | null>(null);
 
   useEffect(() => {
-    members.forEach(member => {
+    members.forEach((member) => {
       if (!member.finishedAt) return;
-
-      // Only trigger if this finishedAt is within the last 10 seconds
       const finishedMs = new Date(member.finishedAt).getTime();
       if (Date.now() - finishedMs > 10_000) return;
 
@@ -55,8 +55,7 @@ export function RoomFinishFx({ members, currentUserId }: RoomFinishFxProps) {
         isCurrentUser: member.userId === currentUserId,
       });
 
-      // Clear after animation
-      setTimeout(() => setShowEffect(null), 3500);
+      setTimeout(() => setShowEffect(null), 3200);
     });
   }, [members, currentUserId]);
 
@@ -65,38 +64,33 @@ export function RoomFinishFx({ members, currentUserId }: RoomFinishFxProps) {
       {showEffect && (
         <motion.div
           key="finish-fx"
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none overflow-hidden"
+          className="fixed inset-0 z-[110] flex flex-col items-center justify-center pointer-events-none px-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.25 }}
         >
-          {/* Expanding rings */}
-          {[0, 0.2, 0.4].map((delay, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full border-2 border-primary/40"
-              initial={{ width: 80, height: 80, opacity: 0.8 }}
-              animate={{ width: 400, height: 400, opacity: 0 }}
-              transition={{ duration: 1.5, delay, ease: 'easeOut' }}
-            />
-          ))}
-
-          {/* Name + message card */}
           <motion.div
-            className="glass border border-primary/30 rounded-2xl px-8 py-5 flex flex-col items-center gap-2 text-center shadow-2xl"
-            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+            className="absolute rounded-full border border-clay/50"
+            initial={{ width: 96, height: 96, opacity: 0.7 }}
+            animate={{ width: 320, height: 320, opacity: 0 }}
+            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          />
+
+          <motion.div
+            className="rounded-[20px] border border-line bg-surface px-8 py-6 flex flex-col items-center gap-2 text-center shadow-[0_12px_32px_rgba(23,21,19,0.14)]"
+            initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
+            exit={{ scale: 0.96, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <span className="text-3xl">🎯</span>
-            <p className="text-sm font-bold text-foreground">
-              {showEffect.isCurrentUser
-                ? 'Session complete!'
-                : `${showEffect.name} finished!`}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-highlight text-ink">
+              <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <p className="text-lg font-bold tracking-tight text-ink">
+              {showEffect.isCurrentUser ? "Session complete" : `${showEffect.name} finished`}
             </p>
-            <p className="text-xs text-muted-foreground">Great focus. Take a break.</p>
+            <p className="text-xs text-ink-muted">Great focus. Take a quiet breather.</p>
           </motion.div>
         </motion.div>
       )}

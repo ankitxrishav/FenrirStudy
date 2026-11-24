@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trophy } from "lucide-react";
+import { Plus, Trophy, Check } from "lucide-react";
 import { differenceInDays } from "date-fns";
-import { collection, query, where, addDoc, updateDoc, doc } from "firebase/firestore";
-import { arrayUnion } from "firebase/firestore";
+import { collection, query, where, addDoc, updateDoc, doc, arrayUnion } from "firebase/firestore";
 import { useFirestore, useUser, useCollection } from "@/firebase";
 import { RoomChallenge, RoomChallengeProgress, RoomMember } from "@/lib/definitions";
 
@@ -59,51 +58,55 @@ function ChallengeCard({
   };
 
   return (
-    <Card className="glass border-white/10">
+    <Card className="border-line bg-surface">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-sm">{challenge.title}</p>
+            <p className="font-semibold text-sm text-ink">{challenge.title}</p>
             {challenge.description && (
-              <p className="text-xs text-muted-foreground">{challenge.description}</p>
+              <p className="text-xs text-ink-muted mt-0.5">{challenge.description}</p>
             )}
           </div>
-          <Badge variant="outline" className="shrink-0 text-[10px]">
+          <Badge variant="outline" className="shrink-0">
             {daysLeft > 0 ? `${daysLeft}d left` : "Ended"}
           </Badge>
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          Target: <span className="font-bold text-foreground">{challenge.targetHours}h</span>
+        <div className="font-mono text-xs text-ink-muted timer-digit">
+          Target: <span className="font-semibold text-ink">{challenge.targetHours}h</span>
         </div>
 
-        {/* Participant progress */}
-        {(progressDocs ?? []).map(p => {
+        {(progressDocs ?? []).map((p) => {
           const pct = Math.min(100, (p.hoursLogged / challenge.targetHours) * 100);
-          const displayName = members.find(m => m.userId === p.userId)?.displayName ?? p.userId.slice(0, 8);
+          const displayName =
+            members.find((m) => m.userId === p.userId)?.displayName ?? p.userId.slice(0, 8);
           return (
             <div key={p.userId} className="space-y-1">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">{p.userId === user?.uid ? "You" : displayName}</span>
-                <span>{p.hoursLogged.toFixed(1)}h</span>
+              <div className="flex justify-between font-mono text-[11px]">
+                <span className="text-ink-muted">{p.userId === user?.uid ? "You" : displayName}</span>
+                <span className="text-ink timer-digit">{p.hoursLogged.toFixed(1)}h</span>
               </div>
-              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+              <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
+                <div className="h-full bg-clay rounded-full" style={{ width: `${pct}%` }} />
               </div>
               {p.completedAt && (
-                <Badge className="text-[10px]">✅ Completed!</Badge>
+                <Badge variant="highlight" className="gap-1">
+                  <Check className="h-3 w-3" strokeWidth={2} /> Completed
+                </Badge>
               )}
             </div>
           );
         })}
 
-        {!isJoined && (
+        {!isJoined ? (
           <Button size="sm" variant="outline" className="w-full" onClick={handleJoin}>
-            Join Challenge
+            Join challenge
           </Button>
-        )}
-        {isJoined && (
-          <p className="text-[10px] text-center text-primary font-semibold">✓ You&apos;re in!</p>
+        ) : (
+          <div className="inline-flex items-center justify-center gap-1.5 w-full font-mono text-[11px] text-success pt-1">
+            <Check className="h-3.5 w-3.5" strokeWidth={2} />
+            <span>Joined</span>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -142,7 +145,10 @@ function CreateChallengeDialog({
         status: "active",
       });
       onOpenChange(false);
-      setTitle(""); setTargetHours(10); setStartDate(""); setEndDate("");
+      setTitle("");
+      setTargetHours(10);
+      setStartDate("");
+      setEndDate("");
     } finally {
       setLoading(false);
     }
@@ -151,29 +157,42 @@ function CreateChallengeDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader><DialogTitle>New Challenge</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>New room challenge</DialogTitle>
+        </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-1.5">
             <Label>Title</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Study 50 hours this month" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Study 50 hours this month"
+            />
           </div>
           <div className="grid gap-1.5">
             <Label>Target Hours</Label>
-            <Input type="number" min={1} value={targetHours} onChange={e => setTargetHours(Number(e.target.value))} />
+            <Input
+              type="number"
+              min={1}
+              value={targetHours}
+              onChange={(e) => setTargetHours(Number(e.target.value))}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
               <Label>Start Date</Label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div className="grid gap-1.5">
               <Label>End Date</Label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={loading || !title.trim()}>Create</Button>
+          <Button onClick={handleSubmit} disabled={loading || !title.trim()}>
+            Create challenge
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -186,23 +205,26 @@ export function RoomChallenges({ roomId, challenges, isOwner, members }: RoomCha
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-          <Trophy className="h-3.5 w-3.5" /> Challenges
+        <h3 className="font-mono text-xs uppercase tracking-wider text-ink-muted flex items-center gap-2">
+          <Trophy className="h-3.5 w-3.5" strokeWidth={1.75} /> Challenges
         </h3>
         {isOwner && (
-          <Button size="sm" variant="ghost" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
+          <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)} className="h-9 gap-1.5">
+            <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
+            <span>New challenge</span>
           </Button>
         )}
       </div>
 
       {challenges.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          No active challenges. {isOwner ? "Create one!" : "Ask the room owner to create one."}
-        </p>
+        <div className="rounded-[16px] border border-line/30 bg-surface-soft py-8 text-center text-sm text-ink-muted">
+          No active challenges. {isOwner ? "Create one for your room." : "Ask the room owner to create one."}
+        </div>
       ) : (
         <div className="space-y-3">
-          {challenges.map(c => <ChallengeCard key={c.id} challenge={c} roomId={roomId} members={members} />)}
+          {challenges.map((c) => (
+            <ChallengeCard key={c.id} challenge={c} roomId={roomId} members={members} />
+          ))}
         </div>
       )}
 

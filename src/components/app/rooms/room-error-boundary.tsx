@@ -27,10 +27,10 @@ export class RoomErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Card className="glass border-destructive/20">
+        <Card className="border-danger bg-surface">
           <CardContent className="p-6 flex flex-col items-center gap-2 text-center">
-            <AlertTriangle className="h-6 w-6 text-destructive/70" />
-            <p className="text-sm text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 text-danger" />
+            <p className="text-sm text-ink-muted">
               {this.props.fallbackLabel ?? "Something went wrong loading this panel."}
             </p>
           </CardContent>

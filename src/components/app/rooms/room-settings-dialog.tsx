@@ -183,11 +183,10 @@ export function RoomSettingsDialog({ room, members, isOpen, onOpenChange }: Room
               />
             </TabsContent>
 
-            {/* Members tab */}
             <TabsContent value="members" className="pt-4 space-y-2">
-              <p className="text-xs text-muted-foreground mb-3">{members.length} member{members.length !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-ink-muted mb-3">{members.length} member{members.length !== 1 ? "s" : ""}</p>
               {members.map((m, index) => (
-                <div key={m.id || m.userId || `member-${index}`} className="flex items-center gap-3 rounded-lg px-3 py-2 bg-white/[0.02] border border-white/5">
+                <div key={m.id || m.userId || `member-${index}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-surface-soft border border-line/20">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={m.photoURL} />
                     <AvatarFallback className="text-xs">{(m.displayName ?? "?").slice(0, 2).toUpperCase()}</AvatarFallback>

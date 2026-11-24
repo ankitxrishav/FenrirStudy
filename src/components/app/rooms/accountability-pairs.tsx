@@ -19,10 +19,10 @@ interface AccountabilityPairsProps {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  studying: "bg-green-500",
-  break: "bg-yellow-500",
-  idle: "bg-gray-400",
-  offline: "bg-gray-600",
+  studying: "bg-success",
+  break: "bg-clay",
+  idle: "bg-ink-muted/50",
+  offline: "bg-line/30",
 };
 
 export function AccountabilityPairs({ roomId, members }: AccountabilityPairsProps) {
@@ -92,9 +92,15 @@ export function AccountabilityPairs({ roomId, members }: AccountabilityPairsProp
     await updateDoc(doc(firestore, "rooms", roomId, "pairs", activePair.id), { checkInTime: time });
   };
 
-  // Browser notification scheduling
   useEffect(() => {
-    if (!activePair || !partner || typeof window === "undefined") return;
+    if (
+      !activePair ||
+      !partner ||
+      typeof window === "undefined" ||
+      !("Notification" in window)
+    ) {
+      return;
+    }
     if (Notification.permission === "default") {
       Notification.requestPermission();
     }
@@ -133,52 +139,50 @@ export function AccountabilityPairs({ roomId, members }: AccountabilityPairsProp
 
       <CollapsibleContent className="space-y-3 pt-2">
         {activePair && partner ? (
-          // Has active pair
-          <Card className="glass border-primary/20">
+          <Card className="border-line bg-surface">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 border border-line/20">
                   <AvatarImage src={partner.photoURL} />
                   <AvatarFallback>{(partner.displayName ?? "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">{partner.displayName}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[partner.status] ?? "bg-gray-500")} />
-                    <span className="text-xs text-muted-foreground capitalize">{partner.status}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-ink truncate">{partner.displayName}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[partner.status] ?? "bg-line/30")} />
+                    <span className="text-xs text-ink-muted capitalize">{partner.status}</span>
                   </div>
                 </div>
                 <Badge variant="secondary">Partner</Badge>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground">Check-in time:</label>
+                <label className="text-xs text-ink-muted">Check-in time:</label>
                 <input
                   type="time"
                   value={activePair.checkInTime}
                   onChange={e => handleUpdateCheckInTime(e.target.value)}
-                  className="h-7 text-xs rounded border border-input bg-background px-2"
+                  className="h-9 text-xs rounded-lg border border-line/30 bg-surface-soft text-ink px-2 font-mono"
                 />
               </div>
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleUnpair}>
+              <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={handleUnpair}>
                 Unpair
               </Button>
             </CardContent>
           </Card>
         ) : (
-          // No pair — show list of unpaired members
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Find an accountability partner:</p>
+            <p className="text-xs text-ink-muted">Find an accountability partner:</p>
             {unpairedMembers.length === 0 ? (
-              <p className="text-xs text-muted-foreground/60 text-center py-2">All members are already paired.</p>
+              <p className="text-xs text-ink-muted text-center py-2">All members are already paired.</p>
             ) : (
               unpairedMembers.map(m => (
-                <div key={m.userId} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white/[0.02] border border-white/5">
-                  <Avatar className="h-7 w-7">
+                <div key={m.userId} className="flex items-center gap-2.5 rounded-xl px-3 py-2 bg-surface-soft border border-line/20">
+                  <Avatar className="h-7 w-7 border border-line/20">
                     <AvatarImage src={m.photoURL} />
                     <AvatarFallback className="text-[9px]">{(m.displayName ?? "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="flex-1 text-sm">{m.displayName}</span>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePairUp(m)}>
+                  <span className="flex-1 text-sm text-ink truncate">{m.displayName}</span>
+                  <Button size="sm" variant="outline" className="h-9 text-xs shrink-0" onClick={() => handlePairUp(m)}>
                     Pair Up
                   </Button>
                 </div>

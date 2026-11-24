@@ -13,6 +13,7 @@ import {
   BookOpen,
   History,
   Settings,
+  Smartphone,
   LogOut,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
@@ -53,6 +54,7 @@ export function MobileNav() {
     { href: "/subjects", label: "Subjects", icon: BookOpen },
     { href: "/history", label: "History", icon: History },
     { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/download", label: "Get Android App", icon: Smartphone },
   ];
 
   const isSecondaryActive = secondaryRoutes.some((r) => pathname.startsWith(r.href));

@@ -11,6 +11,7 @@ import {
   BookOpen,
   History,
   Settings,
+  Smartphone,
   LogOut,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
@@ -84,6 +85,19 @@ export function LeftRail() {
       </div>
 
       <div className="flex flex-col items-center gap-1.5 w-full pt-3 border-t border-line/15">
+        <Link
+          href="/download"
+          className={cn(
+            "flex w-full flex-col items-center justify-center gap-1 rounded-[10px] py-2 px-1 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            pathname.startsWith("/download")
+              ? "bg-highlight border border-line text-ink"
+              : "border border-transparent text-ink-muted hover:bg-surface-soft hover:text-ink"
+          )}
+        >
+          <Smartphone className="h-[18px] w-[18px]" strokeWidth={pathname.startsWith("/download") ? 2 : 1.75} />
+          <span className="text-[10px] leading-none font-medium">Android</span>
+        </Link>
+
         <Link
           href="/settings"
           className={cn(

@@ -3,6 +3,7 @@
 
 
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
+[![Android App](https://img.shields.io/badge/Android_APK-Download_v1.1.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.1.0.apk)
 [![Netlify](https://img.shields.io/badge/Netlify-Deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-Framework-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Language-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)

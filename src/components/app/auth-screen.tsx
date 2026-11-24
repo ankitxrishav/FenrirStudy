@@ -9,6 +9,7 @@ import { useAuth, useFirestore, useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { FenrirLogo } from "@/components/icons";
+import { AndroidDownloadCard } from "@/components/app/android-download-card";
 import LoadingScreen from "@/components/app/loading-screen";
 import {
   setAuthHintCookie,
@@ -294,6 +295,8 @@ export function AuthScreen() {
               <p>Active room members land straight in their study room.</p>
               <p>Your personal timer stays accessible anytime from the sidebar or bottom bar.</p>
             </div>
+
+            <AndroidDownloadCard compact />
           </div>
 
           <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">

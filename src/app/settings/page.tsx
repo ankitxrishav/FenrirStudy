@@ -30,6 +30,7 @@ import { useTimerStyle } from "@/hooks/use-timer-style";
 import { setStartPageCookie } from "@/lib/routing-cookies";
 import LoadingScreen from "@/components/app/loading-screen";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { AndroidDownloadCard } from "@/components/app/android-download-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -505,6 +506,8 @@ export default function SettingsPage() {
               </Button>
             </CardContent>
           </Card>
+
+          <AndroidDownloadCard />
         </div>
       </div>
     </div>

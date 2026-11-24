@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Cat, Flame } from "lucide-react";
+import { Cat, Flame, Smartphone } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -153,6 +153,15 @@ export function WorkspaceHeader() {
             </>
           )}
 
+          <Link
+            href="/download"
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 rounded-full border border-line/35 bg-surface-soft px-3 text-xs font-medium text-ink hover:border-line hover:bg-highlight transition-colors"
+            title="Download FenrirStudy Android App"
+          >
+            <Smartphone className="h-3.5 w-3.5 text-clay" strokeWidth={1.75} />
+            <span>Android APK</span>
+          </Link>
+
           <ThemeToggle />
 
           {loading ? (
@@ -209,6 +218,15 @@ export function WorkspaceHeader() {
               <span className="hidden min-[380px]:inline text-[11px]">PewCat</span>
             </button>
           )}
+
+          <Link
+            href="/download"
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 rounded-full border border-line/35 bg-surface-soft px-3 text-xs font-medium text-ink hover:border-line hover:bg-highlight transition-colors"
+            title="Download FenrirStudy Android App"
+          >
+            <Smartphone className="h-3.5 w-3.5 text-clay" strokeWidth={1.75} />
+            <span>Android APK</span>
+          </Link>
 
           <ThemeToggle />
 

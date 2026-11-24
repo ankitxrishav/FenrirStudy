@@ -2,47 +2,58 @@
 
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collectionGroup, query, where } from "firebase/firestore";
-import Timer from "@/components/app/timer/timer";
+import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc } from "@/firebase";
+import { useMyRooms } from "@/hooks/use-room";
 import LoadingScreen from "@/components/app/loading-screen";
-import { RoomMember } from "@/lib/definitions";
+import { AuthScreen } from "@/components/app/auth-screen";
+import { User } from "@/lib/definitions";
+import { setActiveRoomCookie, setStartPageCookie } from "@/lib/routing-cookies";
 
 export default function Home() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { rooms, loading: roomsLoading } = useMyRooms();
 
-  // Query to find if the user is currently a member of any room
-  const memberDocsQuery = useMemo(() => {
-    if (!user || !firestore) return null;
-    return query(
-      collectionGroup(firestore, "members"),
-      where("userId", "==", user.uid)
-    );
-  }, [user, firestore]);
-
-  const { data: memberDocs, loading: memberLoading } = useCollection<RoomMember>(memberDocsQuery);
+  const userDocRef = useMemo(
+    () => (user && firestore ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData, loading: userDocLoading } = useDoc<User>(userDocRef);
 
   useEffect(() => {
-    if (userLoading || memberLoading) return;
+    if (userLoading) return;
+    if (!user) return;
+    if (roomsLoading || userDocLoading) return;
 
-    if (user && memberDocs && memberDocs.length > 0) {
-      // User is logged in and already a member of a room — redirect directly to the room
-      const roomId = memberDocs[0].roomId;
+    if (rooms.length > 0) {
+      const roomId = rooms[0].id;
+      setActiveRoomCookie(roomId);
       router.replace(`/rooms/${roomId}`);
+      return;
     }
-  }, [user, userLoading, memberDocs, memberLoading, router]);
 
-  // Show a loading screen while resolving authentication and room membership status
-  if (userLoading || (user && memberLoading)) {
-    return <LoadingScreen />;
+    setActiveRoomCookie(null);
+    const pref = userData?.settings?.startPage;
+    if (pref) setStartPageCookie(pref);
+
+    if (pref === "timer") {
+      router.replace("/timer");
+    } else if (pref === "rooms") {
+      router.replace("/rooms");
+    } else {
+      router.replace("/dashboard");
+    }
+  }, [user, userLoading, rooms, roomsLoading, userData?.settings?.startPage, userDocLoading, router]);
+
+  if (userLoading || (user && (roomsLoading || userDocLoading))) {
+    return <LoadingScreen label="Preparing your workspace" />;
   }
 
-  // Otherwise, render the main timer page
-  return (
-    <div className="flex h-full w-full items-center justify-center p-4">
-      <Timer />
-    </div>
-  );
+  if (user) {
+    return <LoadingScreen label="Opening your workspace" />;
+  }
+
+  return <AuthScreen />;
 }

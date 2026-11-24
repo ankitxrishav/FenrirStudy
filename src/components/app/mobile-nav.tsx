@@ -43,7 +43,7 @@ export function MobileNav() {
 
   const primaryTabs = [
     { href: roomHref, label: "Room", icon: Users, match: (p: string) => p.startsWith("/rooms") },
-    { href: "/", label: "Timer", icon: Timer, match: (p: string) => p === "/" || p.startsWith("/timer") },
+    { href: "/timer", label: "Timer", icon: Timer, match: (p: string) => p.startsWith("/timer") },
     { href: "/dashboard", label: "Overview", icon: LayoutGrid, match: (p: string) => p.startsWith("/dashboard") },
   ];
 

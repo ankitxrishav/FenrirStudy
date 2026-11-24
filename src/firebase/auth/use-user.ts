@@ -8,6 +8,7 @@ import { useFirebase } from '../provider';
 import { type User as AppUser } from '@/lib/definitions';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
+import { setAuthHintCookie, setActiveRoomCookie, setStartPageCookie } from '@/lib/routing-cookies';
 
 let lastSyncedUid: string | null = null;
 
@@ -30,6 +31,7 @@ export function useUser() {
     console.log("[Auth] Attaching onAuthStateChanged listener...");
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
+        setAuthHintCookie(true);
         setUser(authUser);
         setLoading(false);
 
@@ -63,6 +65,10 @@ export function useUser() {
                 errorEmitter.emit('permission-error', permissionError);
               });
             } else {
+              const existing = userSnap.data() as AppUser | undefined;
+              if (existing?.settings?.startPage) {
+                setStartPageCookie(existing.settings.startPage);
+              }
               const updateData = { lastLogin: serverTimestamp() };
               setDoc(userRef, updateData, { merge: true }).catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
@@ -82,6 +88,8 @@ export function useUser() {
           });
         }
       } else {
+        setAuthHintCookie(false);
+        setActiveRoomCookie(null);
         setUser(null);
         setLoading(false);
         lastSyncedUid = null; // Clear on logout

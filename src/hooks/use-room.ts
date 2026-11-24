@@ -30,6 +30,7 @@ import {
   RoomGoal,
 } from '@/lib/definitions';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { setActiveRoomCookie } from '@/lib/routing-cookies';
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
@@ -147,6 +148,7 @@ export function useMyRooms() {
 
     if (memberDocs.length === 0) {
       setRooms([]);
+      setActiveRoomCookie(null);
       setLoading(false);
       return;
     }
@@ -161,6 +163,7 @@ export function useMyRooms() {
           .filter(d => d.exists())
           .map(d => ({ id: d.id, ...d.data() } as Room));
         setRooms(fetched);
+        setActiveRoomCookie(fetched[0]?.id ?? null);
       } catch (e) {
         console.error('useMyRooms fetch error', e);
       } finally {
@@ -234,6 +237,7 @@ export async function createRoom(
     roomId,
   });
 
+  setActiveRoomCookie(roomId);
   return roomId;
 }
 
@@ -301,6 +305,7 @@ export async function joinRoomByCode(
     roomId: room.id,
   });
 
+  setActiveRoomCookie(room.id);
   return room.id;
 }
 
@@ -332,6 +337,10 @@ export async function leaveRoom(
     memberIds: arrayRemove(uid),
     totalMemberCount: increment(-1),
   });
+
+  if (!targetUserId) {
+    setActiveRoomCookie(null);
+  }
 }
 
 export async function updateMyPresence(

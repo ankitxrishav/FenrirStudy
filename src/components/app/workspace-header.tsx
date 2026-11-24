@@ -97,7 +97,7 @@ export function WorkspaceHeader() {
         <div className="flex items-center gap-2 shrink-0">
           {showRunningPill && (
             <Link
-              href="/"
+              href="/timer"
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 font-mono text-xs timer-digit transition-colors duration-150",
                 isActive ? "bg-clay-soft text-ink" : "bg-surface-soft text-ink-muted"
@@ -183,7 +183,7 @@ export function WorkspaceHeader() {
         <div className="flex items-center gap-1.5 shrink-0">
           {showRunningPill && (
             <Link
-              href="/"
+              href="/timer"
               className="inline-flex items-center gap-1 rounded-full border border-line bg-clay-soft px-2 py-1 font-mono text-[11px] timer-digit text-ink"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-clay" />

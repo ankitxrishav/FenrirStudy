@@ -31,7 +31,7 @@ export function LeftRail() {
   const primaryNav = [
     { href: "/dashboard", label: "Overview", icon: LayoutGrid, match: (p: string) => p.startsWith("/dashboard") },
     { href: roomHref, label: "Room", icon: Users, match: (p: string) => p.startsWith("/rooms") },
-    { href: "/", label: "Timer", icon: Timer, match: (p: string) => p === "/" || p.startsWith("/timer") },
+    { href: "/timer", label: "Timer", icon: Timer, match: (p: string) => p.startsWith("/timer") },
     { href: "/goals", label: "Goals", icon: Target, match: (p: string) => p.startsWith("/goals") },
     { href: "/routine", label: "Routine", icon: Repeat2, match: (p: string) => p.startsWith("/routine") },
     { href: "/subjects", label: "Subjects", icon: BookOpen, match: (p: string) => p.startsWith("/subjects") },

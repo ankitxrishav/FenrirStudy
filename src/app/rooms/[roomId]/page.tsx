@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, use } from "react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { useRoom, leaveRoom } from "@/hooks/use-room";
+import { setActiveRoomCookie } from "@/lib/routing-cookies";
 import { usePresenceSync } from "@/hooks/use-presence-sync";
 import { useRoomPresence, useFinishBroadcast } from "@/hooks/use-room-presence";
 import { useRouter } from "next/navigation";
@@ -110,18 +111,30 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !room) {
+      setActiveRoomCookie(null);
+    }
+  }, [loading, room]);
+
   if (userLoading || loading || !user) return <LoadingScreen />;
 
   if (!room) {
     return (
-      <div className="flex h-screen items-center justify-center p-4">
-        <Card className="glass border-white/10 max-w-sm w-full">
-          <CardContent className="p-8 text-center">
-            <p className="text-xl font-bold mb-2">Room not found.</p>
-            <p className="text-muted-foreground text-sm mb-4">
-              This room may have been deleted or the link is invalid.
+      <div className="flex min-h-[60vh] items-center justify-center p-4">
+        <Card className="max-w-md w-full border-line bg-surface">
+          <CardContent className="p-8 space-y-4">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+              Room unavailable
+            </span>
+            <h1 className="text-2xl font-bold text-ink">Room not found or inaccessible</h1>
+            <p className="text-ink-muted text-sm">
+              This study room may have been deleted, or your membership is no longer active.
             </p>
-            <Button onClick={() => router.push("/rooms")}>Back to Rooms</Button>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button onClick={() => router.replace("/rooms")}>Browse Rooms</Button>
+              <Button variant="outline" onClick={() => router.replace("/dashboard")}>Go to Overview</Button>
+            </div>
           </CardContent>
         </Card>
       </div>

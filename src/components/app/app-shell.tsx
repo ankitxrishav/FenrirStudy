@@ -7,6 +7,12 @@ import { LeftRail } from "./left-rail";
 import { WorkspaceHeader } from "./workspace-header";
 import { MobileNav } from "./mobile-nav";
 import LoadingScreen from "./loading-screen";
+import { useGlobalRoomPresence } from "@/hooks/use-global-room-presence";
+
+function GlobalPresenceMount() {
+  useGlobalRoomPresence();
+  return null;
+}
 
 const PROTECTED_PREFIXES = [
   "/rooms",
@@ -47,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh w-full bg-page md:p-3 lg:p-5 flex justify-center">
+      {user && <GlobalPresenceMount />}
       <div className="w-full max-w-[1600px] min-h-dvh md:min-h-[calc(100dvh-1.5rem)] lg:min-h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-1.5rem)] lg:max-h-[calc(100dvh-2.5rem)] bg-surface md:border md:border-line md:rounded-[22px] flex overflow-hidden">
         <LeftRail />
         <div className="flex flex-1 min-w-0 flex-col">

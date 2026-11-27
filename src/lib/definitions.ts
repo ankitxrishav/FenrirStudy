@@ -10,6 +10,11 @@ export type Subject = {
   createdAt: string; // ISO string
 };
 
+export type StudySegment = {
+  startTime: string;
+  endTime: string;
+};
+
 export type Session = {
   id: string;
   userId: string;
@@ -21,6 +26,8 @@ export type Session = {
   pauseCount: number;
   status: 'completed' | 'stopped';
   focusScore: number;
+  segments?: StudySegment[];
+  clientSessionId?: string;
 };
 
 export type Goal = {
@@ -72,6 +79,9 @@ export type User = {
   allTimeSessions?: number;
   currentSubjectTodaySeconds?: number;
   todaySubjectBreakdown?: Record<string, number>; // subjectId -> seconds
+  todayStatsDate?: string;
+  weeklyStatsKey?: string;
+  monthlyStatsKey?: string;
   fcmTokens?: string[]; // PWA push notification registration tokens
 };
 
@@ -87,8 +97,13 @@ export type TimerState = {
   sessionStartTime: any;
   // Duration in seconds for pomodoro mode
   initialDuration: number;
-  // Total time in milliseconds the timer has run before the current 'running' phase
+  // Total time in milliseconds or seconds (stored in seconds) before the current 'running' phase
   accumulatedTime: number;
+  activeSessionId?: string;
+  pauseCount?: number;
+  currentSegmentStart?: any;
+  clientStartedAtMs?: number;
+  completedSegments?: StudySegment[];
 }
 
 // ==========================================
@@ -181,6 +196,7 @@ export type RoomMember = {
   subjectName?: string | null;   // denormalized so readers don't need extra query
   subjectColor?: string | null;  // hex color, denormalized same reason
   startedAt?: string | null;     // ISO string — when current phase started
+  clientStartedAtMs?: number | null;
   accumulatedTime?: number;      // seconds elapsed before current phase
   initialDuration?: number;      // seconds, for pomodoro mode
   finishedAt?: string | null;    // ISO string — set for ~4s when timer just completed
@@ -194,6 +210,9 @@ export type RoomMember = {
   allTimeSeconds?: number;
   currentSubjectTodaySeconds?: number;
   todaySubjectBreakdown?: { id: string; name: string; color: string; seconds: number }[];
+  todayStatsDate?: string;
+  weeklyStatsKey?: string;
+  monthlyStatsKey?: string;
 };
 
 export type RoomMessage = {

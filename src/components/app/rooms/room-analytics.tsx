@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BarChart2 } from "lucide-react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { format, subDays, eachDayOfInterval, startOfDay } from "date-fns";
+import { subDays, startOfDay } from "date-fns";
 import { useFirestore } from "@/firebase";
-import { RoomMember } from "@/lib/definitions";
+import { RoomMember, Session } from "@/lib/definitions";
 import { cn } from "@/lib/utils";
+import { resolveSessionIntervals, splitIntervalByLocalDays, formatLocalDateKey, startOfLocalDayMs, addLocalDaysMs } from "@/lib/study-time";
 
 interface RoomAnalyticsProps {
   roomId: string;
@@ -52,10 +53,11 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
     for (let i = 0; i < memberIds.length; i += 30) chunks.push(memberIds.slice(i, i + 30));
 
     const since84 = subDays(new Date(), 83);
+    const queryLookback = subDays(new Date(), 85);
 
     const fetchAnalytics = async () => {
       try {
-        const allSessions: { startTime: string; duration: number; subjectId: string }[] = [];
+        const allSessions: Session[] = [];
         const subjectsMap = new Map<string, { name: string; color: string }>();
 
         await Promise.all(
@@ -66,7 +68,7 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
                 query(
                   collection(firestore, "sessions"),
                   where("userId", "in", chunk),
-                  where("startTime", ">=", startOfDay(since84).toISOString())
+                  where("startTime", ">=", startOfDay(queryLookback).toISOString())
                 )
               ),
             ]);
@@ -77,45 +79,48 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
             });
 
             sessSnap.docs.forEach((d) => {
-              const data = d.data();
-              allSessions.push({
-                startTime: data.startTime,
-                duration: data.duration ?? 0,
-                subjectId: data.subjectId,
-              });
+              allSessions.push({ id: d.id, ...(d.data() as Omit<Session, "id">) });
             });
           })
         );
 
-        const days = eachDayOfInterval({ start: since84, end: new Date() });
+        const todayStart = startOfLocalDayMs(Date.now());
+        const start84 = startOfLocalDayMs(since84.getTime());
         const dayMap = new Map<string, number>();
-        days.forEach((d) => dayMap.set(format(d, "yyyy-MM-dd"), 0));
-
-        allSessions.forEach((s) => {
-          const key = format(new Date(s.startTime), "yyyy-MM-dd");
-          dayMap.set(key, (dayMap.get(key) ?? 0) + s.duration);
-        });
-
-        setDayData(
-          days.map((d) => ({
-            date: format(d, "yyyy-MM-dd"),
-            totalSeconds: dayMap.get(format(d, "yyyy-MM-dd")) ?? 0,
-          }))
-        );
+        for (let i = 0; i < 84; i++) {
+          dayMap.set(formatLocalDateKey(addLocalDaysMs(start84, i)), 0);
+        }
 
         const subjectMap = new Map<string, number>();
         allSessions.forEach((s) => {
-          subjectMap.set(s.subjectId, (subjectMap.get(s.subjectId) ?? 0) + s.duration);
+          const intervals = resolveSessionIntervals(s);
+          for (const iv of intervals) {
+            const slices = splitIntervalByLocalDays(iv.startMs, iv.endMs);
+            for (const sl of slices) {
+              if (sl.startMs >= start84 && sl.startMs <= todayStart + 86_400_000) {
+                dayMap.set(sl.dateKey, (dayMap.get(sl.dateKey) ?? 0) + sl.durationMs);
+                subjectMap.set(s.subjectId, (subjectMap.get(s.subjectId) ?? 0) + sl.durationMs);
+              }
+            }
+          }
         });
+
+        setDayData(
+          Array.from(dayMap.entries()).map(([date, ms]) => ({
+            date,
+            totalSeconds: Math.round(ms / 1000),
+          }))
+        );
+
         const sorted = Array.from(subjectMap.entries())
-          .map(([subjectId, totalSeconds]) => {
+          .map(([subjectId, totalMs]) => {
             const subInfo = subjectsMap.get(subjectId) ?? {
               name: "Other Subject",
               color: "var(--accent)",
             };
             return {
               subjectId,
-              totalSeconds,
+              totalSeconds: Math.round(totalMs / 1000),
               name: subInfo.name,
               color: subInfo.color,
             };

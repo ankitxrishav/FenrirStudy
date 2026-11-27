@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const ANDROID_APK_URL =
-  "https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.1.0.apk";
+  "https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.2.0.apk";
 export const ANDROID_RELEASES_URL =
   "https://github.com/ankitxrishav/FenrirStudy-App/releases/latest";
 export const ANDROID_REPO_URL =
@@ -23,7 +23,7 @@ export function AndroidDownloadCard({ compact = false }: { compact?: boolean }) 
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-ink truncate">FenrirStudy for Android</p>
-              <p className="text-[11px] text-ink-muted truncate">Live Firebase sync · v1.1.0 APK</p>
+              <p className="text-[11px] text-ink-muted truncate">Live Firebase sync · v1.2.0 APK</p>
             </div>
           </div>
           <a
@@ -49,7 +49,7 @@ export function AndroidDownloadCard({ compact = false }: { compact?: boolean }) 
             Android App
           </CardTitle>
           <span className="rounded-full border border-line bg-highlight px-2.5 py-0.5 font-mono text-[10px] font-semibold text-ink">
-            v1.1.0 · RELEASE
+            v1.2.0 · RELEASE
           </span>
         </div>
       </CardHeader>

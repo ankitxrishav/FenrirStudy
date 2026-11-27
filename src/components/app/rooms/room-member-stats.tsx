@@ -1,12 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { RoomMember } from "@/lib/definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Activity, Clock } from "lucide-react";
+import {
+  getEffectiveMemberTodaySeconds,
+  getPeriodKeys,
+  parseIsoMs,
+  startOfLocalDayMs,
+} from "@/lib/study-time";
 
 export function RoomMemberStats({ members }: { members: RoomMember[] }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const hasRunning = members.some((m) => m.timerStatus === "running");
+
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (!hasRunning) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasRunning]);
+
   if (members.length === 0) return null;
+
+  const keys = getPeriodKeys(nowMs);
+  const todayStart = startOfLocalDayMs(nowMs);
 
   return (
     <Card className="border-line bg-surface">
@@ -20,22 +40,23 @@ export function RoomMemberStats({ members }: { members: RoomMember[] }) {
       <CardContent className="p-4 sm:p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {members.map((m) => {
-            let liveTime = 0;
-            if (m.timerStatus === "running" && m.startedAt) {
-              const start = new Date(m.startedAt).getTime();
-              liveTime = Math.floor(Math.max(0, Date.now() - start) / 1000);
-            }
+            const startMs = parseIsoMs(m.startedAt) || m.clientStartedAtMs || 0;
+            const liveTodayDelta =
+              m.timerStatus === "running" && startMs > 0
+                ? Math.round(Math.max(0, nowMs - Math.max(startMs, todayStart)) / 1000)
+                : 0;
 
-            const todaySeconds = (m.todaySeconds || 0) + liveTime;
+            const todaySeconds = getEffectiveMemberTodaySeconds(m, nowMs);
             const hours = Math.floor(todaySeconds / 3600);
             const minutes = Math.floor((todaySeconds % 3600) / 60);
 
-            const subjSeconds = (m.currentSubjectTodaySeconds || 0) + liveTime;
+            const fresh = !m.todayStatsDate || m.todayStatsDate === keys.todayDateKey;
+            const subjSeconds = (fresh ? (m.currentSubjectTodaySeconds || 0) : 0) + liveTodayDelta;
             const subjHours = Math.floor(subjSeconds / 3600);
             const subjMins = Math.floor((subjSeconds % 3600) / 60);
             const subjTimeStr = subjHours > 0 ? `${subjHours}h ${subjMins}m` : `${subjMins}m`;
 
-            const allTimeMins = Math.floor(((m.allTimeSeconds || 0) + liveTime) / 60);
+            const allTimeMins = Math.floor(((m.allTimeSeconds || 0) + liveTodayDelta) / 60);
             const xp = allTimeMins * 10 + (m.allTimeSessions || 0) * 50;
             const level = Math.max(1, Math.floor(Math.sqrt(xp) / 5));
 
@@ -74,11 +95,11 @@ export function RoomMemberStats({ members }: { members: RoomMember[] }) {
                   </div>
                 </div>
 
-                {m.todaySubjectBreakdown && m.todaySubjectBreakdown.length > 0 && (
+                {fresh && m.todaySubjectBreakdown && m.todaySubjectBreakdown.length > 0 && (
                   <div className="mb-3 space-y-1">
                     {m.todaySubjectBreakdown.map((s) => {
                       const isCurrent = m.timerStatus === "running" && m.subjectName === s.name;
-                      const sSeconds = s.seconds + (isCurrent ? liveTime : 0);
+                      const sSeconds = s.seconds + (isCurrent ? liveTodayDelta : 0);
                       const sHrs = Math.floor(sSeconds / 3600);
                       const sMins = Math.floor((sSeconds % 3600) / 60);
                       if (sHrs === 0 && sMins === 0) return null;
@@ -103,7 +124,7 @@ export function RoomMemberStats({ members }: { members: RoomMember[] }) {
 
                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-line/15">
                   <span className="font-mono text-xs text-ink-muted timer-digit">
-                    {m.todaySessions || 0} sessions
+                    {fresh ? (m.todaySessions || 0) : 0} sessions
                   </span>
                   <div className="inline-flex items-center gap-1.5 font-mono text-sm font-semibold text-ink timer-digit">
                     <Clock className="h-3.5 w-3.5 text-clay" strokeWidth={1.75} />

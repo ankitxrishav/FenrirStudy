@@ -11,7 +11,8 @@ import {
   Cell,
 } from "recharts";
 import { Session } from "@/lib/definitions";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { sliceSessionsByDate } from "@/lib/study-time";
 
 interface OverviewProps {
   sessions: Session[] | null;
@@ -19,45 +20,24 @@ interface OverviewProps {
 
 export function Overview({ sessions }: OverviewProps) {
   const data = useMemo(() => {
-    const today = startOfDay(new Date());
-    const weeklyData = Array.from({ length: 7 }).map((_, i) => {
-      const date = startOfDay(subDays(today, 6 - i));
-      return {
-        name: format(date, "EEE"),
-        fullDate: format(date, "MMM d"),
-        date,
-        isToday: i === 6,
-        total: 0,
-      };
-    });
-
-    if (sessions) {
-      sessions.forEach((session) => {
-        const sessionDayStart = startOfDay(new Date(session.startTime));
-        const dayData = weeklyData.find(
-          (d) => d.date.getTime() === sessionDayStart.getTime()
-        );
-        if (dayData) {
-          dayData.total += session.duration;
-        }
-      });
-    }
-
-    return weeklyData.map((d) => {
-      const totalMinutes = Math.round(d.total / 60);
+    if (!sessions) return null;
+    const sliced = sliceSessionsByDate(sessions, 7);
+    return sliced.map((entry, i) => {
+      const dateObj = parseISO(entry.dateKey);
+      const totalMinutes = Math.round(entry.seconds / 60);
       const h = Math.floor(totalMinutes / 60);
       const m = totalMinutes % 60;
       return {
-        name: d.name,
-        fullDate: d.fullDate,
-        isToday: d.isToday,
+        name: format(dateObj, "EEE"),
+        fullDate: format(dateObj, "MMM d"),
+        isToday: i === sliced.length - 1,
         total: totalMinutes,
         formatted: h > 0 ? `${h}h ${m}m` : `${m}m`,
       };
     });
   }, [sessions]);
 
-  if (!sessions) {
+  if (!data) {
     return (
       <div className="h-[260px] flex items-center justify-center text-sm text-ink-muted">
         Loading chart...

@@ -3,7 +3,7 @@
 
 
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
-[![Android App](https://img.shields.io/badge/Android_APK-Download_v1.1.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.1.0.apk)
+[![Android App](https://img.shields.io/badge/Android_APK-Download_v1.2.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.2.0.apk)
 [![Netlify](https://img.shields.io/badge/Netlify-Deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-Framework-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Language-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -113,6 +113,14 @@ CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 ```bash
 npm run dev
 ```
+
+---
+
+## v1.2.0 Architecture & YPT-Inspired Upgrades
+
+- **Cross-Midnight Time Engine (`src/lib/study-time.ts`)**: Splits every completed and running study interval strictly at local calendar midnight (`00:00:00`) and hourly boundaries, preventing previous-day/next-day attribution skew and deduplicating overlapping multi-device intervals.
+- **Event-Driven Live Room Sync (`use-global-room-presence.ts`)**: Syncs timer state (`studying` / `paused` / `stopped`) and active segments instantaneously across all joined study rooms regardless of the active page, eliminating unmount resets and aggressive polling.
+- **Complete YPT-Parity Analytics**: Daily, weekly, monthly, and all-time totals with yesterday/7-day comparison deltas, 24-hour rhythm distribution, personal bests, interactive monthly history calendar with tap-a-day breakdown, and date-stamped peer caches.
 
 ---
 

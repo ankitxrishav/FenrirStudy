@@ -7,6 +7,7 @@ import { RoomMember, Subject } from "@/lib/definitions";
 import { useFirestore, useUser } from "@/firebase";
 import { addDoc, collection } from "firebase/firestore";
 import { Flame, CheckCircle2, BookOpen, Zap } from "lucide-react";
+import { parseIsoMs } from "@/lib/study-time";
 
 interface MemberGridProps {
   roomId: string;
@@ -65,7 +66,17 @@ export function MemberGrid({ roomId, members, subjects }: MemberGridProps) {
   return (
     <div className="rounded-[16px] border border-line bg-surface divide-y divide-line/15 overflow-hidden">
       {members.map((member, idx) => {
-        const cfg = STATUS_CONFIG[member.status] ?? STATUS_CONFIG.idle;
+        const lastSeenMs = parseIsoMs(member.lastSeen);
+        const isStale = lastSeenMs > 0 && Date.now() - lastSeenMs > 120_000;
+        const effectiveStatus: keyof typeof STATUS_CONFIG =
+          member.timerStatus === "running"
+            ? "studying"
+            : member.timerStatus === "paused"
+              ? "break"
+              : member.status === "offline" || isStale
+                ? "offline"
+                : "idle";
+        const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.idle;
         const initials = (member.displayName ?? "?").slice(0, 2).toUpperCase();
         const subjectName = member.subjectName || (member.currentSubjectId ? subjectMap.get(member.currentSubjectId) : null);
         const isMe = member.userId === user?.uid;
@@ -80,7 +91,7 @@ export function MemberGrid({ roomId, members, subjects }: MemberGridProps) {
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="relative shrink-0">
-                <Avatar className={cn("h-10 w-10 border border-line/40", member.status === "offline" && "opacity-60")}>
+                <Avatar className={cn("h-10 w-10 border border-line/40", effectiveStatus === "offline" && "opacity-60")}>
                   <AvatarImage src={member.photoURL} alt={member.displayName} />
                   <AvatarFallback className="bg-surface-soft font-mono text-xs text-ink">
                     {initials}

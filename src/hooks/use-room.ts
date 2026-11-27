@@ -31,6 +31,7 @@ import {
 } from '@/lib/definitions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { setActiveRoomCookie } from '@/lib/routing-cookies';
+import { computePeriodicStats } from '@/lib/study-time';
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
@@ -394,35 +395,37 @@ export async function checkAndUpdateCollectiveStreak(
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
-    const startOfToday = startOfDay(today).toISOString();
+    const lookbackStart = startOfDay(subDays(today, 1)).toISOString();
 
-    // Get room doc
     const roomSnap = await getDoc(doc(firestore, 'rooms', roomId));
     if (!roomSnap.exists()) return;
     const room = { id: roomSnap.id, ...roomSnap.data() } as Room;
 
-    // Query sessions for any member today
     const memberIds = room.memberIds;
     if (memberIds.length === 0) return;
 
-    // Batch into chunks of 30 (Firestore 'in' limit)
     const chunks: string[][] = [];
     for (let i = 0; i < memberIds.length; i += 30) {
       chunks.push(memberIds.slice(i, i + 30));
     }
 
+    const nowMs = today.getTime();
     let hasStudyToday = false;
     for (const chunk of chunks) {
       const sessSnap = await getDocs(
         query(
           collection(firestore, 'sessions'),
           where('userId', 'in', chunk),
-          where('startTime', '>=', startOfToday)
+          where('startTime', '>=', lookbackStart)
         )
       );
       if (!sessSnap.empty) {
-        hasStudyToday = true;
-        break;
+        const docs = sessSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        const summary = computePeriodicStats(docs, null, nowMs);
+        if (summary.today.seconds > 0) {
+          hasStudyToday = true;
+          break;
+        }
       }
     }
 

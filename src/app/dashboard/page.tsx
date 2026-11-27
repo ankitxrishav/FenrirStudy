@@ -88,10 +88,11 @@ export default function DashboardPage() {
     const { data: allSessions, loading: sessionsLoading } = useCollection<Session>(sessionsQuery);
     const { data: allSubjects } = useCollection<Subject>(subjectsQuery);
 
-    const stats = useDashboardStats(allSessions, allSubjects);
+    const dailyTarget = userData?.settings?.studyTargetHours ?? 2;
+    const stats = useDashboardStats(allSessions, allSubjects, dailyTarget);
 
-    const allTimeSeconds = allSessions?.reduce((acc, s) => acc + s.duration, 0) || 0;
-    const allTimeSessions = allSessions?.length || 0;
+    const allTimeSeconds = stats?.core.timeAllTime ?? 0;
+    const allTimeSessions = stats?.core.totalSessions ?? 0;
     const userLevel = calculateUserLevel(allTimeSeconds, allTimeSessions);
 
     // Fetch habits for analytics
@@ -194,16 +195,33 @@ export default function DashboardPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.timeToday)}</div>
-                                        <div className="mt-4 flex items-center gap-2">
+                                        <div className="mt-4 flex flex-wrap items-center gap-2">
                                             <div className={cn(
                                                 "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full",
-                                                stats.core.momentum >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                                                stats.core.dailyComparisonPct >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
                                             )}>
-                                                {stats.core.momentum >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                                                {Math.abs(Math.round(stats.core.momentum))}%
+                                                {stats.core.dailyComparisonPct >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                                                {Math.abs(Math.round(stats.core.dailyComparisonPct))}%
                                             </div>
-                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">VS PREV WEEK</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                                VS YEST ({formatDuration(stats.core.timeYesterday)})
+                                            </span>
                                         </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="glass-card overflow-hidden group">
+                                    <CardHeader className="pb-2 space-y-0">
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                            <span>Daily Goal ({dailyTarget}h)</span>
+                                            <Target className="h-3 w-3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-4xl font-black tracking-tighter">{Math.round(stats.core.goalProgressPct)}%</div>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">
+                                            Streak {stats.core.currentStreak}d (Best {stats.core.bestStreak}d)
+                                        </p>
                                     </CardContent>
                                 </Card>
 
@@ -249,13 +267,15 @@ export default function DashboardPage() {
                                 <Card className="glass-card overflow-hidden group">
                                     <CardHeader className="pb-2 space-y-0">
                                         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Max Focus</span>
+                                            <span>Max Focus &amp; Records</span>
                                             <Flame className="h-3 w-3" />
                                         </div>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.longestSession)}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Longest session</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">
+                                            Best Day {stats.core.bestDay ? formatDuration(stats.core.bestDay.seconds) : '0m'} · All-Time {formatDuration(stats.core.timeAllTime)}
+                                        </p>
                                     </CardContent>
                                 </Card>
 
@@ -286,7 +306,7 @@ export default function DashboardPage() {
                                         <div className="text-[10px] font-bold text-muted-foreground bg-white/5 px-3 py-1 rounded-md uppercase tracking-widest">Last 168 Hours</div>
                                     </div>
                                     <div className="h-[300px]">
-                                        <Overview sessions={stats.core.timeThisWeek > 0 ? allSessions : []} />
+                                        <Overview sessions={allSessions ?? []} />
                                     </div>
                                 </Card>
 

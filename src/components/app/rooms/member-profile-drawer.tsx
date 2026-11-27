@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
-import { formatDistanceToNow, startOfWeek } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { useFirestore } from "@/firebase";
 import { RoomMember, Session } from "@/lib/definitions";
+import { computePeriodicStats } from "@/lib/study-time";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,8 +54,6 @@ export function MemberProfileDrawer({ member, onClose }: MemberProfileDrawerProp
     setLoading(true);
     const fetchData = async () => {
       try {
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-
         const recentSnap = await getDocs(
           query(
             collection(firestore, "sessions"),
@@ -68,15 +67,14 @@ export function MemberProfileDrawer({ member, onClose }: MemberProfileDrawerProp
         const allSnap = await getDocs(
           query(collection(firestore, "sessions"), where("userId", "==", member.userId))
         );
-        let allTime = 0;
-        let weekTime = 0;
-        allSnap.docs.forEach((d) => {
-          const data = d.data();
-          allTime += data.duration ?? 0;
-          if (new Date(data.startTime) >= weekStart) weekTime += data.duration ?? 0;
-        });
+        const allSess = allSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Session, "id">) }));
+        const summary = computePeriodicStats(allSess);
 
-        setStats({ allTime, thisWeek: weekTime, sessionCount: allSnap.size });
+        setStats({
+          allTime: summary.allTime.seconds,
+          thisWeek: summary.weekly.seconds,
+          sessionCount: summary.allTime.sessions,
+        });
       } finally {
         setLoading(false);
       }

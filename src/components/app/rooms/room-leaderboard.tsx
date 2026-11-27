@@ -1,29 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RoomMember } from "@/lib/definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getEffectiveMemberPeriodStats } from "@/lib/study-time";
 
 export function RoomLeaderboard({ members }: { members: RoomMember[] }) {
   const [period, setPeriod] = useState<"today" | "weekly" | "monthly">("today");
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const hasRunning = members.some((m) => m.timerStatus === "running");
 
-  const getStats = (m: RoomMember) => {
-    switch (period) {
-      case "today":
-        return { seconds: m.todaySeconds || 0, sessions: m.todaySessions || 0 };
-      case "weekly":
-        return { seconds: m.weeklySeconds || 0, sessions: m.weeklySessions || 0 };
-      case "monthly":
-        return { seconds: m.monthlySeconds || 0, sessions: m.monthlySessions || 0 };
-    }
-  };
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (!hasRunning) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasRunning]);
 
   const sortedMembers = [...members]
-    .filter((m) => getStats(m).seconds > 0)
-    .sort((a, b) => getStats(b).seconds - getStats(a).seconds);
+    .map((member) => ({
+      member,
+      stats: getEffectiveMemberPeriodStats(member, period, nowMs),
+    }))
+    .filter((item) => item.stats.seconds > 0)
+    .sort((a, b) => b.stats.seconds - a.stats.seconds);
 
   return (
     <Card id="leaderboard-panel" className="border-line bg-surface">
@@ -63,8 +66,7 @@ export function RoomLeaderboard({ members }: { members: RoomMember[] }) {
           </div>
         ) : (
           <div className="divide-y divide-line/15">
-            {sortedMembers.map((m, index) => {
-              const stats = getStats(m);
+            {sortedMembers.map(({ member: m, stats }, index) => {
               const hours = Math.floor(stats.seconds / 3600);
               const minutes = Math.floor((stats.seconds % 3600) / 60);
 
@@ -105,6 +107,9 @@ export function RoomLeaderboard({ members }: { members: RoomMember[] }) {
                         </span>
                       )}
                       <span className="font-mono text-[11px]">{stats.sessions} sessions</span>
+                      {m.timerStatus === "running" && (
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+                      )}
                     </div>
                   </div>
 

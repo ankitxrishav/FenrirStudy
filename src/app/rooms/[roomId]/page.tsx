@@ -57,6 +57,7 @@ import { RoomSessionFeed } from "@/components/app/rooms/room-session-feed";
 import { AccountabilityPairs } from "@/components/app/rooms/accountability-pairs";
 import { useToast } from "@/hooks/use-toast";
 import { Subject, RoomMember } from "@/lib/definitions";
+import { getEffectiveMemberTodaySeconds, parseIsoMs } from "@/lib/study-time";
 import { collection, query, where } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 
@@ -129,15 +130,31 @@ export default function RoomPage({ params }: RoomPageProps) {
     return room?.memberIds?.includes(user.uid) || members.some((m) => m.userId === user.uid);
   }, [room?.memberIds, members, user]);
 
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const hasRunningMember = members.some((m) => m.timerStatus === "running");
+
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (!hasRunningMember) return;
+    const id = setInterval(() => setNowMs(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, [hasRunningMember]);
+
   const onlineCount = useMemo(
-    () => members.filter((m) => m.status !== "offline").length,
-    [members]
+    () =>
+      members.filter((m) => {
+        if (m.timerStatus === "running" || m.timerStatus === "paused") return true;
+        if (m.status === "offline") return false;
+        const lastMs = parseIsoMs(m.lastSeen);
+        return lastMs === 0 || nowMs - lastMs <= 120_000;
+      }).length,
+    [members, nowMs]
   );
 
   const totalStudyMinutesToday = useMemo(() => {
-    const seconds = members.reduce((acc, m) => acc + (m.todaySeconds || 0), 0);
+    const seconds = members.reduce((acc, m) => acc + getEffectiveMemberTodaySeconds(m, nowMs), 0);
     return Math.floor(seconds / 60);
-  }, [members]);
+  }, [members, nowMs]);
 
   const handleCopyCode = () => {
     if (!room) return;

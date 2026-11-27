@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RoomMember } from "@/lib/definitions";
+import { getEffectiveMemberTodaySeconds, parseIsoMs } from "@/lib/study-time";
 
 interface MemberTimerCardProps {
   member: RoomMember;
@@ -15,7 +16,11 @@ interface MemberTimerCardProps {
 
 const formatTime = (s: number) => {
   const sec = Math.floor(Math.max(0, s));
-  return `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const rem = sec % 60;
+  if (h > 0) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
 };
 
 export function MemberTimerCard({
@@ -29,38 +34,34 @@ export function MemberTimerCard({
   const initialDuration = member.initialDuration ?? 1500;
   const accumulatedTime = member.accumulatedTime ?? 0;
 
-  const computeDisplaySeconds = () => {
-    if (timerStatus === "running" && member.startedAt) {
-      const elapsedSinceStart = (Date.now() - new Date(member.startedAt).getTime()) / 1000;
-      const totalElapsed = accumulatedTime + elapsedSinceStart;
-      return timerMode === "pomodoro"
-        ? Math.max(0, initialDuration - totalElapsed)
-        : totalElapsed;
-    }
-    if (timerStatus === "paused") {
-      return timerMode === "pomodoro"
-        ? Math.max(0, initialDuration - accumulatedTime)
-        : accumulatedTime;
-    }
-    return timerMode === "pomodoro" ? initialDuration : 0;
-  };
-
-  const [displaySeconds, setDisplaySeconds] = useState(computeDisplaySeconds);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    setDisplaySeconds(computeDisplaySeconds());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [member.startedAt, timerStatus, timerMode, accumulatedTime, initialDuration]);
-
-  useEffect(() => {
-    if (timerStatus !== "running" || !member.startedAt) return;
+    setNowMs(Date.now());
+    if (timerStatus !== "running") return;
     const interval = setInterval(() => {
-      setDisplaySeconds(computeDisplaySeconds());
+      setNowMs(Date.now());
     }, 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timerStatus, member.startedAt, accumulatedTime, initialDuration, timerMode]);
+  }, [timerStatus, member.startedAt, member.clientStartedAtMs]);
 
+  const startedAtMs = parseIsoMs(member.startedAt) || member.clientStartedAtMs || 0;
+  let displaySeconds = 0;
+  if (timerStatus === "running" && startedAtMs > 0) {
+    const elapsedSinceStart = Math.max(0, (nowMs - startedAtMs) / 1000);
+    const totalElapsed = accumulatedTime + elapsedSinceStart;
+    displaySeconds = timerMode === "pomodoro"
+      ? Math.max(0, initialDuration - totalElapsed)
+      : totalElapsed;
+  } else if (timerStatus === "paused") {
+    displaySeconds = timerMode === "pomodoro"
+      ? Math.max(0, initialDuration - accumulatedTime)
+      : accumulatedTime;
+  } else {
+    displaySeconds = timerMode === "pomodoro" ? initialDuration : 0;
+  }
+
+  const todaySec = getEffectiveMemberTodaySeconds(member, nowMs);
   const progressPercent =
     timerMode === "pomodoro" && initialDuration > 0
       ? (displaySeconds / initialDuration) * 100
@@ -81,7 +82,6 @@ export function MemberTimerCard({
           : "border-line bg-surface hover:bg-surface-soft"
       )}
     >
-      {/* Top row */}
       <div className="flex items-center gap-2.5">
         <Avatar className="h-9 w-9 border border-line/40 shrink-0">
           <AvatarImage src={member.photoURL} />
@@ -98,6 +98,7 @@ export function MemberTimerCard({
             {member.subjectName || "No active subject"}
           </p>
         </div>
+
         <span
           title={timerStatus}
           className={cn(
@@ -111,7 +112,6 @@ export function MemberTimerCard({
         />
       </div>
 
-      {/* Live clock + stats */}
       <div className="flex items-baseline justify-between gap-2 pt-1">
         <span
           className={cn(
@@ -128,7 +128,7 @@ export function MemberTimerCard({
 
       <div className="flex items-center justify-between border-t border-line/15 pt-2.5 font-mono text-[11px] text-ink-muted timer-digit">
         <span>{member.todaySessions || 0} sessions</span>
-        <span>{Math.round(((member.todaySeconds || 0) / 3600) * 10) / 10}h today</span>
+        <span>{(todaySec / 3600).toFixed(1)}h today</span>
       </div>
 
       {timerStatus === "running" && !isCurrentUser && (
@@ -145,7 +145,6 @@ export function MemberTimerCard({
         </Button>
       )}
 
-      {/* Bottom hairline progress */}
       <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-surface-muted">
         <div
           className="h-full transition-[width] duration-700"

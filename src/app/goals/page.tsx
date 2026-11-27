@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { startOfDay } from "date-fns";
-import { Flame, Target, Loader2 } from "lucide-react";
+import { Flame, Target, Loader2, Award } from "lucide-react";
 import { doc, updateDoc, query, collection, where } from "firebase/firestore";
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { User, Session } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
 import LoadingScreen from "@/components/app/loading-screen";
+import { computePeriodicStats, computeStudyStatistics } from "@/lib/study-time";
 import {
   Card,
   CardContent,
@@ -36,12 +36,15 @@ export default function GoalsPage() {
   }, [user, firestore]);
   const { data: allSessions } = useCollection<Session>(sessionsQuery);
 
+  const statsSummary = useMemo(() => {
+    if (!allSessions) return null;
+    const target = userData?.settings?.studyTargetHours ?? 2;
+    return computeStudyStatistics(allSessions, [], target);
+  }, [allSessions, userData?.settings?.studyTargetHours]);
+
   const todayStudySeconds = useMemo(() => {
     if (!allSessions) return 0;
-    const todayStart = startOfDay(new Date());
-    return allSessions
-      .filter((s) => new Date(s.startTime) >= todayStart)
-      .reduce((acc, s) => acc + s.duration, 0);
+    return computePeriodicStats(allSessions).today.seconds;
   }, [allSessions]);
 
   const [studyTarget, setStudyTarget] = useState(1);
@@ -166,10 +169,10 @@ export default function GoalsPage() {
             </div>
             <div>
               <div className="text-5xl font-bold tracking-tight tabular-nums text-ink">
-                {userData?.streak || 0}
+                {statsSummary?.core.currentStreak ?? userData?.streak ?? 0}
               </div>
               <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink-muted mt-1">
-                Day Streak
+                Day Streak {statsSummary?.core.bestStreak ? `· Best ${statsSummary.core.bestStreak}d` : ''}
               </p>
             </div>
             <p className="text-sm text-ink-muted max-w-xs">

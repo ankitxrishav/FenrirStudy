@@ -26,7 +26,7 @@ export default function DownloadAndroidPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-highlight px-3 py-1 font-mono text-[11px] font-semibold text-ink">
               <Smartphone className="h-3.5 w-3.5" />
-              FENRIRSTUDY ANDROID · v1.2.0
+              FENRIRSTUDY ANDROID · v1.3.0
             </span>
             <span className="font-mono text-xs text-ink-muted">OPEN SOURCE · MIT LICENSE</span>
           </div>
@@ -49,7 +49,7 @@ export default function DownloadAndroidPage() {
             >
               <a href={ANDROID_APK_URL} target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
-                Download Release APK (v1.2.0)
+                Download Release APK (v1.3.0)
               </a>
             </Button>
 
@@ -113,7 +113,7 @@ export default function DownloadAndroidPage() {
           <div className="space-y-2 text-sm text-ink">
             <p className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
-              <span>1. Download the signed release APK (<code className="font-mono text-xs bg-surface px-1.5 py-0.5 rounded border border-line/30">FenrirStudy-v1.2.0.apk</code>) on Android 8.0+ (API 26+).</span>
+              <span>1. Download the signed release APK (<code className="font-mono text-xs bg-surface px-1.5 py-0.5 rounded border border-line/30">FenrirStudy-v1.3.0.apk</code>) on Android 8.0+ (API 26+). If Google Play Protect prompts &ldquo;App scan recommended&rdquo; on first sideload, tap <strong>Scan app</strong> so Google verifies the signed binary (SHA-256: <code className="font-mono text-[11px] bg-surface px-1.5 py-0.5 rounded border border-line/30 break-all">5d30d8983e751ebd81615755232491fe3bd7d2a189af26a0e22fab06ba6798a4</code>).</span>
             </p>
             <p className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />

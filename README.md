@@ -3,7 +3,8 @@
 
 
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
-[![Android App](https://img.shields.io/badge/Android_APK-Download_v1.2.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.2.0.apk)
+[![Android App](https://img.shields.io/badge/Android_APK-Download_v1.3.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.3.0.apk)
+[![Android Repo](https://img.shields.io/badge/Android_Repo-FenrirStudy--App-24201B?style=for-the-badge&logo=github&logoColor=FFF9EF)](https://github.com/ankitxrishav/FenrirStudy-App)
 [![Netlify](https://img.shields.io/badge/Netlify-Deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-Framework-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Language-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -115,6 +116,15 @@ npm run dev
 ```
 
 ---
+
+## Android Companion App
+
+FenrirStudy runs across **Web** and **Android** with real-time Firebase sync for study timers, shared rooms, inline chat, subjects, D-Days, to-dos, and routines:
+
+- **Android Repository:** [ankitxrishav/FenrirStudy-App](https://github.com/ankitxrishav/FenrirStudy-App)
+- **Latest APK (`v1.3.0`):** [`FenrirStudy-v1.3.0.apk`](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.3.0.apk) (`SHA-256: 5d30d8983e751ebd81615755232491fe3bd7d2a189af26a0e22fab06ba6798a4`)
+- **Web Download Guide:** [fenrirstudy.vercel.app/download](https://fenrirstudy.vercel.app/download)
+- **First-Install Note:** Sideloaded APKs outside Google Play may prompt Play Protect *"App scan recommended — Play Protect hasn't seen this app before"*. Tap **Scan app** so Google scans and remembers the signed APK.
 
 ## v1.3.0 Deep Analytics & Study Planner Suite
 

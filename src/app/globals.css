@@ -126,6 +126,36 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  @keyframes fenrir-flip-top {
+    0% {
+      transform: perspective(650px) rotateX(0deg);
+    }
+    100% {
+      transform: perspective(650px) rotateX(-90deg);
+    }
+  }
+
+  @keyframes fenrir-flip-bottom {
+    0% {
+      transform: perspective(650px) rotateX(90deg);
+    }
+    100% {
+      transform: perspective(650px) rotateX(0deg);
+    }
+  }
+
+  .animate-flip-top {
+    animation: fenrir-flip-top 180ms ease-in forwards;
+    transform-origin: 50% 50%;
+    backface-visibility: hidden;
+  }
+
+  .animate-flip-bottom {
+    animation: fenrir-flip-bottom 180ms ease-out 180ms both;
+    transform-origin: 50% 50%;
+    backface-visibility: hidden;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

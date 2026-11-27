@@ -155,7 +155,7 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted flex items-center gap-1.5">
               <Activity className="h-3.5 w-3.5 text-clay" />
-              Analytics &amp; YPT Insights
+              Study Analytics
             </span>
             <Badge className="bg-highlight text-ink border border-line font-mono text-[11px]">
               Level {userLevel}
@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </div>
 
           <p className="text-sm text-ink-muted max-w-xl">
-            Calendar-accurate session math, continuous focus blocks, study vs. rest balance, and 4-month patterns.
+            Today, week, month, focus balance, and study rhythm — all explained clearly at a glance.
           </p>
         </div>
 
@@ -219,7 +219,7 @@ export default function DashboardPage() {
         <div className="inline-flex flex-wrap gap-1 rounded-full border border-line bg-surface p-1">
           {([
             { id: "overview", label: "Overview", icon: PieChart },
-            { id: "insights", label: "YPT Insights", icon: Sparkles },
+            { id: "insights", label: "Deep Analytics", icon: Sparkles },
             { id: "habits", label: "Habits & To-Dos", icon: Repeat2 },
           ] as const).map((t) => {
             const Icon = t.icon;
@@ -310,7 +310,7 @@ export default function DashboardPage() {
             <Card className="border-line bg-surface rounded-3xl">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                  <span>Avg (Excl. Day Off)</span>
+                  <span>Daily Average (Excl. Rest Days)</span>
                   <BarChart3 className="h-3.5 w-3.5 text-clay" />
                 </div>
               </CardHeader>
@@ -319,7 +319,7 @@ export default function DashboardPage() {
                   {formatDuration(stats.core.avgExclDayOffSeconds)}
                 </div>
                 <p className="font-mono text-[11px] text-ink-muted mt-3">
-                  7d Active Avg: {formatDuration(stats.core.avgTimePerWeek)}
+                  This week: {formatDuration(stats.core.timeThisWeek)} · Month: {formatDuration(stats.core.timeThisMonth)}
                 </p>
               </CardContent>
             </Card>
@@ -327,7 +327,7 @@ export default function DashboardPage() {
             <Card className="border-line bg-surface rounded-3xl">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                  <span>Efficiency &amp; Max Block</span>
+                  <span>Focus Quality &amp; Best Block</span>
                   <Coffee className="h-3.5 w-3.5 text-clay" />
                 </div>
               </CardHeader>
@@ -336,17 +336,32 @@ export default function DashboardPage() {
                   {stats.breaks.focusEfficiencyPct}%
                 </div>
                 <p className="font-mono text-[11px] text-ink-muted mt-3">
-                  Max block {formatDuration(stats.core.maxContinuousSeconds)} · All-time {formatDuration(stats.core.timeAllTime)}
+                  Unbroken {formatDuration(stats.core.maxContinuousSeconds)} · All-time {formatDuration(stats.core.timeAllTime)}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Clock Window Summary Pill Strip */}
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
               <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
-                Avg Study Window (30d)
+                This Week
+              </span>
+              <span className="font-mono text-sm font-semibold text-ink tabular-nums">
+                {formatDuration(stats.core.timeThisWeek)}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                This Month
+              </span>
+              <span className="font-mono text-sm font-semibold text-ink tabular-nums">
+                {formatDuration(stats.core.timeThisMonth)}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Typical Hours (30d)
               </span>
               <span className="font-mono text-sm font-semibold text-ink tabular-nums">
                 {formatMinuteOfDay(stats.schedule.avgStartMinuteOfDay)} → {formatMinuteOfDay(stats.schedule.avgFinishMinuteOfDay)}
@@ -354,23 +369,15 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
               <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
-                Study Rhythm
+                Best Day / Rhythm
               </span>
-              <span className="font-mono text-sm font-semibold text-ink flex items-center gap-1.5">
+              <span className="font-mono text-sm font-semibold text-ink flex items-center gap-1.5 tabular-nums">
                 {stats.behavior.rhythm === "Night Owl" ? (
                   <Moon className="h-3.5 w-3.5 text-clay" />
                 ) : (
                   <Sun className="h-3.5 w-3.5 text-clay" />
                 )}
-                {stats.behavior.rhythm}
-              </span>
-            </div>
-            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
-                Best Day Record
-              </span>
-              <span className="font-mono text-sm font-semibold text-ink tabular-nums">
-                {stats.core.bestDay ? formatDuration(stats.core.bestDay.seconds) : "0m"}
+                {stats.core.bestDay ? formatDuration(stats.core.bestDay.seconds) : "0m"} · {stats.behavior.rhythm}
               </span>
             </div>
           </div>

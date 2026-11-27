@@ -15,6 +15,7 @@ interface MemberTimerCardProps {
   onMemberClick: (member: RoomMember) => void;
   onNudge?: (member: RoomMember) => void;
   nudgeCooldownUntil?: number;
+  nowMs?: number;
 }
 
 const formatTime = (s: number) => {
@@ -33,22 +34,25 @@ export function MemberTimerCard({
   onMemberClick,
   onNudge,
   nudgeCooldownUntil = 0,
+  nowMs: externalNowMs,
 }: MemberTimerCardProps) {
   const timerStatus = member.timerStatus ?? "stopped";
   const timerMode = member.timerMode ?? "pomodoro";
   const initialDuration = member.initialDuration ?? 1500;
   const accumulatedTime = member.accumulatedTime ?? 0;
 
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [localNowMs, setLocalNowMs] = useState(() => Date.now());
+  const nowMs = externalNowMs ?? localNowMs;
 
   useEffect(() => {
-    setNowMs(Date.now());
+    if (externalNowMs !== undefined) return;
+    setLocalNowMs(Date.now());
     if (timerStatus !== "running" && nudgeCooldownUntil <= Date.now()) return;
     const interval = setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
+      setLocalNowMs(Date.now());
+    }, 250);
     return () => clearInterval(interval);
-  }, [timerStatus, member.startedAt, member.clientStartedAtMs, nudgeCooldownUntil]);
+  }, [externalNowMs, timerStatus, member.startedAt, member.clientStartedAtMs, nudgeCooldownUntil]);
 
   const startedAtMs = parseIsoMs(member.startedAt) || member.clientStartedAtMs || 0;
   let displaySeconds = 0;
@@ -58,12 +62,12 @@ export function MemberTimerCard({
     const totalElapsed = accumulatedTime + elapsedSinceStart;
     continuousElapsedSec = totalElapsed;
     displaySeconds = timerMode === "pomodoro"
-      ? Math.max(0, initialDuration - totalElapsed)
-      : totalElapsed;
+      ? Math.ceil(Math.max(0, initialDuration - totalElapsed))
+      : Math.floor(totalElapsed);
   } else if (timerStatus === "paused") {
     displaySeconds = timerMode === "pomodoro"
-      ? Math.max(0, initialDuration - accumulatedTime)
-      : accumulatedTime;
+      ? Math.ceil(Math.max(0, initialDuration - accumulatedTime))
+      : Math.floor(accumulatedTime);
   } else {
     displaySeconds = timerMode === "pomodoro" ? initialDuration : 0;
   }

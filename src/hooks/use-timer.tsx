@@ -265,12 +265,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
       if (timerState.mode === 'pomodoro') {
         const remaining = Math.max(0, timerState.initialDuration - totalElapsedTime);
-        setDisplayTime(remaining);
+        const nextSec = remaining <= 0 ? 0 : Math.ceil(remaining);
+        setDisplayTime((prev) => (prev === nextSec ? prev : nextSec));
         if (remaining <= 0 && !isProcessingStop.current) {
           stopRef.current('completed');
         }
       } else {
-        setDisplayTime(totalElapsedTime);
+        const nextSec = Math.floor(Math.max(0, totalElapsedTime));
+        setDisplayTime((prev) => (prev === nextSec ? prev : nextSec));
       }
     }
   }, [timerState, mode, customDuration]);
@@ -279,7 +281,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timerState?.status === 'running') {
       calculateDisplayTime();
-      intervalRef.current = setInterval(calculateDisplayTime, 1000);
+      intervalRef.current = setInterval(calculateDisplayTime, 200);
     } else {
       calculateDisplayTime();
     }

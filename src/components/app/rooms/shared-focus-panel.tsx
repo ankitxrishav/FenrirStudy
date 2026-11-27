@@ -47,27 +47,34 @@ export function SharedFocusPanel({ roomId, room }: SharedFocusPanelProps) {
     ? (sf.mode === "work" ? sf.workDuration : sf.breakDuration) * 60
     : workDur * 60;
 
+  const sfStatus = sf?.status;
+  const sfMode = sf?.mode;
+  const sfStartedAt = sf?.startedAt;
+  const sfPausedElapsed = sf?.pausedElapsed ?? 0;
+  const sfWorkDur = sf?.workDuration;
+  const sfBreakDur = sf?.breakDuration;
+  const sfCycle = sf?.cycleCount ?? 0;
+
   useEffect(() => {
-    if (!sf || sf.status === "stopped") {
+    if (!sfStatus || sfStatus === "stopped") {
       setDisplaySeconds(workDur * 60);
       return;
     }
 
-    if (sf.status === "paused") {
-      const pausedElapsed = sf.pausedElapsed ?? 0;
-      setDisplaySeconds(Math.max(0, currentDur - pausedElapsed));
+    if (sfStatus === "paused") {
+      setDisplaySeconds(Math.ceil(Math.max(0, currentDur - sfPausedElapsed)));
       return;
     }
 
     const tick = () => {
-      const baseElapsed = sf.pausedElapsed ?? 0;
-      const sinceStart = (Date.now() - new Date(sf.startedAt).getTime()) / 1000;
-      const remaining = currentDur - (baseElapsed + sinceStart);
-      setDisplaySeconds(Math.max(0, remaining));
+      const sinceStart = sfStartedAt ? (Date.now() - new Date(sfStartedAt).getTime()) / 1000 : 0;
+      const remaining = currentDur - (sfPausedElapsed + Math.max(0, sinceStart));
+      const nextSec = remaining <= 0 ? 0 : Math.ceil(remaining);
+      setDisplaySeconds((prev) => (prev === nextSec ? prev : nextSec));
 
-      if (remaining <= 0 && sf.status === "running" && isOwner && firestore) {
-        const nextMode = sf.mode === "work" ? "break" : "work";
-        const newCycles = sf.mode === "work" ? sf.cycleCount + 1 : sf.cycleCount;
+      if (remaining <= 0 && sfStatus === "running" && isOwner && firestore) {
+        const nextMode = sfMode === "work" ? "break" : "work";
+        const newCycles = sfMode === "work" ? sfCycle + 1 : sfCycle;
         updateDoc(doc(firestore, "rooms", roomId), {
           "sharedFocus.mode": nextMode,
           "sharedFocus.startedAt": new Date().toISOString(),
@@ -81,9 +88,9 @@ export function SharedFocusPanel({ roomId, room }: SharedFocusPanelProps) {
     };
 
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 200);
     return () => clearInterval(id);
-  }, [sf, workDur, currentDur, isOwner, firestore, roomId, toast]);
+  }, [sfStatus, sfMode, sfStartedAt, sfPausedElapsed, sfWorkDur, sfBreakDur, sfCycle, workDur, currentDur, isOwner, firestore, roomId, toast]);
 
   const startFocus = useCallback(async () => {
     if (!firestore || !user) return;

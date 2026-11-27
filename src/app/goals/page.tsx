@@ -203,7 +203,7 @@ export default function GoalsPage() {
         </Card>
       </div>
 
-      {/* YPT D-Day Exam Countdowns */}
+      {/* D-Day Exam Countdowns */}
       <Card className="border-line bg-surface rounded-3xl">
         <CardHeader className="border-b border-line/15">
           <CardTitle className="flex items-center gap-2 text-lg text-ink">

@@ -27,18 +27,22 @@ export function useTimerStyle() {
   const { data: userData } = useDoc<User>(userDocRef);
 
   useEffect(() => {
-    try {
-      const savedStyle = localStorage.getItem(STYLE_STORAGE_KEY) as TimerFaceStyle | null;
-      if (savedStyle && VALID_STYLES.includes(savedStyle)) {
-        setTimerStyleState(savedStyle);
-      }
-      const savedTone = localStorage.getItem(TONE_STORAGE_KEY) as FullscreenTone | null;
-      if (savedTone && VALID_TONES.includes(savedTone)) {
-        setFullscreenToneState(savedTone);
-      }
-    } catch {
-      // ignore storage errors
-    }
+    const syncLocal = () => {
+      try {
+        const savedStyle = localStorage.getItem(STYLE_STORAGE_KEY) as TimerFaceStyle | null;
+        if (savedStyle && VALID_STYLES.includes(savedStyle)) {
+          setTimerStyleState(savedStyle);
+        }
+        const savedTone = localStorage.getItem(TONE_STORAGE_KEY) as FullscreenTone | null;
+        if (savedTone && VALID_TONES.includes(savedTone)) {
+          setFullscreenToneState(savedTone);
+        }
+      } catch {}
+    };
+    syncLocal();
+    const handler = () => syncLocal();
+    window.addEventListener("fenrir-timer-style", handler);
+    return () => window.removeEventListener("fenrir-timer-style", handler);
   }, []);
 
   useEffect(() => {
@@ -47,9 +51,7 @@ export function useTimerStyle() {
       setTimerStyleState(remoteStyle);
       try {
         localStorage.setItem(STYLE_STORAGE_KEY, remoteStyle);
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
   }, [userData?.settings?.timerFace]);
 
@@ -58,9 +60,8 @@ export function useTimerStyle() {
       setTimerStyleState(style);
       try {
         localStorage.setItem(STYLE_STORAGE_KEY, style);
-      } catch {
-        // ignore
-      }
+      } catch {}
+      window.dispatchEvent(new Event("fenrir-timer-style"));
       if (user && firestore) {
         setDoc(
           doc(firestore, "users", user.uid),
@@ -76,9 +77,8 @@ export function useTimerStyle() {
     setFullscreenToneState(tone);
     try {
       localStorage.setItem(TONE_STORAGE_KEY, tone);
-    } catch {
-      // ignore
-    }
+    } catch {}
+    window.dispatchEvent(new Event("fenrir-timer-style"));
   }, []);
 
   return {

@@ -96,10 +96,10 @@ export function YptInsights({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            YPT Deep Analytics
+            Deep Analytics
           </p>
           <h2 className="text-xl font-bold tracking-tight text-ink">
-            Focus Patterns, Efficiency &amp; Multi-Month Trends
+            Understand Every Study Pattern at a Glance
           </h2>
         </div>
         <Button
@@ -118,13 +118,13 @@ export function YptInsights({
         <Card className="border-line bg-surface rounded-2xl">
           <CardContent className="p-4">
             <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              Avg (Excl. Day Off)
+              Daily Avg (Active Days)
             </p>
             <p className="text-2xl font-bold tabular-nums text-ink mt-1">
               {fmtShort(stats.core.avgExclDayOffSeconds)}
             </p>
             <p className="font-mono text-[11px] text-ink-muted mt-1">
-              Incl. Day Off: {fmtShort(stats.core.avgInclDayOffSeconds)}
+              Skips rest days · All days: {fmtShort(stats.core.avgInclDayOffSeconds)}
             </p>
           </CardContent>
         </Card>
@@ -132,13 +132,13 @@ export function YptInsights({
         <Card className="border-line bg-surface rounded-2xl">
           <CardContent className="p-4">
             <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              30d Attendance Rate
+              30-Day Consistency
             </p>
             <p className="text-2xl font-bold tabular-nums text-ink mt-1">
               {stats.core.attendanceRate30d}%
             </p>
             <p className="font-mono text-[11px] text-ink-muted mt-1">
-              {stats.core.studiedDays30d} studied · {stats.core.dayOffCount30d} day off
+              {stats.core.studiedDays30d} studied · {stats.core.dayOffCount30d} rest days
             </p>
           </CardContent>
         </Card>
@@ -146,13 +146,13 @@ export function YptInsights({
         <Card className="border-line bg-surface rounded-2xl">
           <CardContent className="p-4">
             <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              Focus vs. Rest Efficiency
+              Focus vs. Break Ratio
             </p>
             <p className="text-2xl font-bold tabular-nums text-ink mt-1">
               {stats.breaks.focusEfficiencyPct}%
             </p>
             <p className="font-mono text-[11px] text-ink-muted mt-1">
-              Avg break {fmtShort(stats.breaks.avgBreakPerStudiedDaySeconds)}/day
+              Avg rest {fmtShort(stats.breaks.avgBreakPerStudiedDaySeconds)}/day
             </p>
           </CardContent>
         </Card>
@@ -160,13 +160,13 @@ export function YptInsights({
         <Card className="border-line bg-surface rounded-2xl">
           <CardContent className="p-4">
             <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              Avg Uninterrupted Block
+              Typical Focus Block
             </p>
             <p className="text-2xl font-bold tabular-nums text-ink mt-1">
               {fmtShort(stats.core.avgContinuousSeconds)}
             </p>
             <p className="font-mono text-[11px] text-ink-muted mt-1">
-              Max: {fmtShort(stats.core.maxContinuousSeconds)}
+              Longest unbroken: {fmtShort(stats.core.maxContinuousSeconds)}
             </p>
           </CardContent>
         </Card>
@@ -429,10 +429,10 @@ export function YptInsights({
           <CardHeader className="pb-3 border-b border-line/15">
             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
               <Flame className="h-4 w-4 text-clay" />
-              Continuous Focus Histogram (20m Buckets)
+              Session Length Breakdown (20m Buckets)
             </CardTitle>
             <CardDescription className="text-xs text-ink-muted">
-              Uninterrupted focus blocks grouped in 20-minute intervals
+              How long you usually stay focused before pausing or stopping
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5">
@@ -468,10 +468,10 @@ export function YptInsights({
           <CardHeader className="pb-3 border-b border-line/15">
             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
               <Clock className="h-4 w-4 text-clay" />
-              Weekday Average &amp; Study Window (Last 30d)
+              When You Study Each Weekday (30d)
             </CardTitle>
             <CardDescription className="text-xs text-ink-muted">
-              Average hours per weekday alongside typical start–finish clock
+              Average focus hours and typical start–finish clock per day
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 space-y-2.5">
@@ -590,10 +590,10 @@ export function YptInsights({
           <CardHeader className="pb-3 border-b border-line/15">
             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
               <Award className="h-4 w-4 text-clay" />
-              4-Month Milestone Rates (Last 120 Days)
+              Daily Hour Milestones (Last 120 Days)
             </CardTitle>
             <CardDescription className="text-xs text-ink-muted">
-              Share of active study days exceeding each duration milestone
+              How often you reached 1h, 2h, 4h, 6h, or 8h+ on active days
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 space-y-3">
@@ -652,7 +652,7 @@ export function YptInsights({
         <CardHeader className="pb-3 border-b border-line/15">
           <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
             <Activity className="h-4 w-4 text-clay" />
-            Quarterly Activity Matrix (120 Days)
+            120-Day Activity Calendar
           </CardTitle>
         </CardHeader>
         <CardContent className="p-5 overflow-x-auto">

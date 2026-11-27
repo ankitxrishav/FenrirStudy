@@ -37,6 +37,9 @@ export function useGlobalRoomPresence() {
   const subjectsRef = useRef(subjects ?? []);
   subjectsRef.current = subjects ?? [];
 
+  const lastBroadcastSigRef = useRef<string>('');
+  const roomsKey = useMemo(() => rooms.map((r) => r.id).sort().join(','), [rooms]);
+
   const buildPayload = useCallback((explicitStatus?: 'studying' | 'idle' | 'offline', finishedIso?: string | null) => {
     const ts = timerStateRef.current;
     const uData = userDataRef.current;
@@ -48,7 +51,9 @@ export function useGlobalRoomPresence() {
     const subjectId = ts?.subjectId || null;
     const subject = subs.find((s) => s.id === subjectId) ?? null;
 
-    const startedAtMs = ts?.status === 'running' ? (parseIsoMs(ts.startedAt) || ts.clientStartedAtMs || nowMs) : 0;
+    const serverStartMs = ts?.status === 'running' ? parseIsoMs(ts.startedAt) : 0;
+    const clientStartMs = ts?.status === 'running' ? (ts.clientStartedAtMs || 0) : 0;
+    const startedAtMs = serverStartMs || clientStartMs;
     const startedAtIso = startedAtMs > 0 ? new Date(startedAtMs).toISOString() : null;
 
     const mappedBreakdown: { id: string; name: string; color: string; seconds: number }[] = [];
@@ -114,9 +119,13 @@ export function useGlobalRoomPresence() {
   }, []);
 
   const broadcastNow = useCallback(
-    async (explicitStatus?: 'studying' | 'idle' | 'offline', finishedIso?: string | null) => {
+    async (explicitStatus?: 'studying' | 'idle' | 'offline', finishedIso?: string | null, force = false) => {
       if (!firestore || !user || roomsRef.current.length === 0) return;
       const payload = buildPayload(explicitStatus, finishedIso);
+      const { lastSeen: _ignored, ...comparable } = payload;
+      const sig = JSON.stringify(comparable);
+      if (!force && sig === lastBroadcastSigRef.current) return;
+      lastBroadcastSigRef.current = sig;
       await Promise.all(
         roomsRef.current.map((room) =>
           updateDoc(doc(firestore, 'rooms', room.id, 'members', user.uid), payload).catch(() => {})
@@ -126,11 +135,18 @@ export function useGlobalRoomPresence() {
     [firestore, user, buildPayload]
   );
 
-  // Instant push whenever timerStates/{uid} changes (start / pause / resume / stop / subject)
   useEffect(() => {
     if (!user || !firestore) return;
     const tsDoc = doc(firestore, 'timerStates', user.uid);
     const unsub = onSnapshot(tsDoc, (snap) => {
+      if (snap.metadata.hasPendingWrites && snap.exists()) {
+        const nextPending = snap.data() as TimerState;
+        if (nextPending.status === 'running' && !nextPending.startedAt) {
+          timerStateRef.current = nextPending;
+          broadcastNow(undefined, null);
+          return;
+        }
+      }
       const next = snap.exists() ? (snap.data() as TimerState) : null;
       const prevStatus = prevTimerStatusRef.current;
       const nextStatus = next?.status ?? 'stopped';
@@ -139,28 +155,28 @@ export function useGlobalRoomPresence() {
 
       const justFinished = prevStatus === 'running' && nextStatus === 'stopped';
       const finishIso = justFinished ? new Date().toISOString() : null;
-      broadcastNow(undefined, finishIso);
+      broadcastNow(undefined, finishIso, justFinished);
 
       if (justFinished && roomsRef.current.length > 0) {
         roomsRef.current.forEach((r) => {
           checkAndUpdateCollectiveStreak(firestore, r.id).catch(() => {});
         });
         setTimeout(() => {
-          broadcastNow(undefined, null);
+          broadcastNow(undefined, null, true);
         }, 4000);
       }
     });
     return () => unsub();
   }, [user, firestore, broadcastNow]);
 
-  // Push updated stats whenever userData periodic totals or rooms membership change
   useEffect(() => {
     if (!user || !firestore || rooms.length === 0) return;
-    broadcastNow(undefined, null);
+    broadcastNow(undefined, null, false);
   }, [
     user,
     firestore,
     rooms.length,
+    roomsKey,
     userData?.todaySeconds,
     userData?.todaySessions,
     userData?.todayStatsDate,
@@ -170,17 +186,16 @@ export function useGlobalRoomPresence() {
     broadcastNow,
   ]);
 
-  // 25s heartbeat + visibility / reconnect / unload listeners (never marks offline on window blur!)
   useEffect(() => {
     if (!user || !firestore || rooms.length === 0) return;
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        broadcastNow();
+        broadcastNow(undefined, undefined, true);
       }
     };
     const handleOnline = () => {
-      broadcastNow();
+      broadcastNow(undefined, undefined, true);
     };
     const handlePageHide = () => {
       const payload = buildPayload('offline');
@@ -190,7 +205,7 @@ export function useGlobalRoomPresence() {
     };
 
     const intervalId = setInterval(() => {
-      broadcastNow();
+      broadcastNow(undefined, undefined, true);
     }, 25_000);
 
     document.addEventListener('visibilitychange', handleVisibility);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MemberTimerCard } from "./member-timer-card";
 import { useTimer } from "@/hooks/use-timer";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,15 @@ export function MemberTimerGrid({ members, currentUserId, onMemberClick, onNudge
   const { handleModeChange, handleDurationChange, start, stop, isIdle } = useTimer();
   const { toast } = useToast();
   const [syncTarget, setSyncTarget] = useState<RoomMember | null>(null);
+  const studyingCount = members.filter((m) => m.timerStatus === "running").length;
+  const [tickNowMs, setTickNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    setTickNowMs(Date.now());
+    if (studyingCount === 0) return;
+    const id = setInterval(() => setTickNowMs(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [studyingCount]);
 
   const doSync = async (targetMember: RoomMember) => {
     if (!isIdle) {
@@ -64,8 +73,6 @@ export function MemberTimerGrid({ members, currentUserId, onMemberClick, onNudge
     }
   };
 
-  const studyingCount = members.filter((m) => m.timerStatus === "running").length;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -87,6 +94,7 @@ export function MemberTimerGrid({ members, currentUserId, onMemberClick, onNudge
             onMemberClick={onMemberClick}
             onNudge={onNudge}
             nudgeCooldownUntil={nudgeCooldowns?.[member.userId] ?? 0}
+            nowMs={tickNowMs}
           />
         ))}
       </div>

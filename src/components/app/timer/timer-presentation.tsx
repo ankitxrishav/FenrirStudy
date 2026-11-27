@@ -45,14 +45,43 @@ function FlipTile({
   isCharcoal: boolean;
   isRunning: boolean;
 }) {
+  const [flipState, setFlipState] = React.useState({ curr: value, prev: value, seq: 0 });
+  const [flipping, setFlipping] = React.useState(false);
+
+  React.useEffect(() => {
+    setFlipState((prev) => {
+      if (prev.curr === value) return prev;
+      return { curr: value, prev: prev.curr, seq: prev.seq + 1 };
+    });
+  }, [value]);
+
+  React.useEffect(() => {
+    if (flipState.seq === 0) return;
+    setFlipping(true);
+    const id = setTimeout(() => setFlipping(false), 370);
+    return () => clearTimeout(id);
+  }, [flipState.seq]);
+
+  const cardBg = isCharcoal ? "bg-[#221F1B] text-[#F2ECE1]" : "bg-surface-soft text-ink";
+  const digitCls = cn(
+    "font-mono font-semibold timer-digit tracking-tight leading-none select-none",
+    size === "fullscreen"
+      ? compact
+        ? "text-[38px] min-[420px]:text-[52px] sm:text-[82px] md:text-[100px]"
+        : "text-[54px] min-[380px]:text-[66px] sm:text-[96px] md:text-[118px]"
+      : compact
+        ? "text-[32px] min-[380px]:text-[38px] sm:text-[48px]"
+        : "text-[40px] min-[380px]:text-[48px] sm:text-[62px]"
+  );
+
+  const staticBottomValue = flipping ? flipState.prev : flipState.curr;
+
   return (
     <div className="flex flex-col items-center gap-1.5 sm:gap-2">
       <div
         className={cn(
-          "relative flex items-center justify-center border select-none overflow-hidden transition-colors duration-200",
-          isCharcoal
-            ? "border-[#3E372F] bg-[#221F1B] text-[#F2ECE1]"
-            : "border-line bg-surface-soft text-ink",
+          "relative border select-none overflow-hidden transition-colors duration-200",
+          isCharcoal ? "border-[#3E372F] bg-[#221F1B]" : "border-line bg-surface-soft",
           size === "fullscreen"
             ? compact
               ? "w-[74px] h-[86px] min-[420px]:w-[96px] min-[420px]:h-[110px] sm:w-[144px] sm:h-[164px] md:w-[172px] md:h-[192px] rounded-[16px] sm:rounded-[20px]"
@@ -63,37 +92,56 @@ function FlipTile({
         )}
       >
         <div
-          aria-hidden="true"
-          className={cn(
-            "absolute inset-x-0 top-0 h-1/2 pointer-events-none",
-            isCharcoal ? "bg-white/[0.02]" : "bg-black/[0.02]"
-          )}
-        />
-        <span
-          className={cn(
-            "relative z-10 font-mono font-semibold timer-digit tracking-tight leading-none",
-            size === "fullscreen"
-              ? compact
-                ? "text-[38px] min-[420px]:text-[52px] sm:text-[82px] md:text-[100px]"
-                : "text-[54px] min-[380px]:text-[66px] sm:text-[96px] md:text-[118px]"
-              : compact
-                ? "text-[32px] min-[380px]:text-[38px] sm:text-[48px]"
-                : "text-[40px] min-[380px]:text-[48px] sm:text-[62px]"
-          )}
+          className={cn("absolute inset-0 flex items-center justify-center", cardBg)}
+          style={{ clipPath: "inset(0 0 50% 0)" }}
         >
-          {value}
-        </span>
+          <span className={digitCls}>{flipState.curr}</span>
+        </div>
+
+        <div
+          className={cn("absolute inset-0 flex items-center justify-center", cardBg)}
+          style={{ clipPath: "inset(50% 0 0 0)" }}
+        >
+          <span className={digitCls}>{staticBottomValue}</span>
+        </div>
+
+        {flipping && (
+          <>
+            <div
+              key={`top-${flipState.seq}`}
+              className={cn("absolute inset-0 z-10 flex items-center justify-center animate-flip-top", cardBg)}
+              style={{ clipPath: "inset(0 0 50% 0)" }}
+            >
+              <span className={digitCls}>{flipState.prev}</span>
+            </div>
+            <div
+              key={`bot-${flipState.seq}`}
+              className={cn("absolute inset-0 z-10 flex items-center justify-center animate-flip-bottom", cardBg)}
+              style={{ clipPath: "inset(50% 0 0 0)" }}
+            >
+              <span className={digitCls}>{flipState.curr}</span>
+            </div>
+          </>
+        )}
+
         <div
           aria-hidden="true"
           className={cn(
-            "absolute inset-x-0 top-1/2 -translate-y-px h-[2px] z-20 pointer-events-none",
+            "absolute inset-x-0 top-0 h-1/2 pointer-events-none z-20",
+            isCharcoal ? "bg-white/[0.03]" : "bg-black/[0.025]"
+          )}
+        />
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-x-0 top-1/2 -translate-y-px h-[2px] z-30 pointer-events-none",
             isCharcoal ? "bg-[#12100E]" : "bg-page"
           )}
         />
         {isRunning && (
           <span
             aria-hidden="true"
-            className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-clay"
+            className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-clay z-30"
           />
         )}
       </div>

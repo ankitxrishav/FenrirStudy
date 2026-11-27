@@ -229,7 +229,7 @@ test('running timer across midnight and peer stats cache expiration compute exac
   assert.equal(effWeek.seconds, 10800 + 1200);
 });
 
-test('YPT advanced analytics compute 20m focus histogram, study/rest efficiency, day-off streak protection, stacked bars, and CSV report', () => {
+test('advanced analytics compute 20m focus histogram, study/rest efficiency, day-off streak protection, stacked bars, and CSV report', () => {
   const sNov25: Session = {
     id: 'd25',
     userId: 'u1',

@@ -116,6 +116,12 @@ npm run dev
 
 ---
 
+## v1.3.0 YPT Insights & Study Planner Suite
+
+- **YPT Deep Analytics (`src/components/app/dashboard/ypt-insights.tsx`)**: Adds 30-day averages excluding/including Day Off, 30-day attendance rate, Focus vs. Rest efficiency with break tag breakdown, 20-minute continuous focus duration histogram, cumulative Today vs. Yesterday comparison, Mon–Sun weekly comparison bars, 14d/6m stacked subject trends, `>=50%` habit hour bands, 120-day milestone rates (`1h+`–`8h+`), big-day common traits, quarterly activity matrix, and full CSV report export.
+- **24-Hour Visual Timeline & Daily Closing Diary (`/history`)**: Log offline/manual study blocks (`source: 'manual'`), tag break periods (`Meal`, `Rest`, `Walk`, `Nap`, `Recharge`), mark Day Off with streak protection, rate daily focus (1–5 stars + closing notes), and inspect sessions on a 24-hour calendar timeline.
+- **Exam D-Days, Subject To-Dos & Ambient Focus Sound (`/goals`, `/routine`, `/timer`)**: Pin exam countdowns (`D-14`) across header pills and live rooms, manage subject-linked To-Dos with achievement rate & one-tap Carry Over to tomorrow, play Web Audio synthesized ambient soundscapes (`Rain`, `Brown Noise`, `Library`, `Cafe`, `Fireplace`), and nudge idle room peers with a 2-hour cooldown.
+
 ## v1.2.0 Architecture & YPT-Inspired Upgrades
 
 - **Cross-Midnight Time Engine (`src/lib/study-time.ts`)**: Splits every completed and running study interval strictly at local calendar midnight (`00:00:00`) and hourly boundaries, preventing previous-day/next-day attribution skew and deduplicating overlapping multi-device intervals.

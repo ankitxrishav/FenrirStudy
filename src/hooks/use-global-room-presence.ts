@@ -5,7 +5,7 @@ import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/f
 import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
 import { useMyRooms, checkAndUpdateCollectiveStreak } from '@/hooks/use-room';
 import { Subject, TimerState, User } from '@/lib/definitions';
-import { getPeriodKeys, parseIsoMs } from '@/lib/study-time';
+import { getPeriodKeys, parseIsoMs, pickMainDday } from '@/lib/study-time';
 
 /**
  * Syncs live timer state, status, and fresh periodic totals across ALL joined rooms
@@ -74,6 +74,8 @@ export function useGlobalRoomPresence() {
     const todayFresh = !uData?.todayStatsDate || uData.todayStatsDate === keys.todayDateKey;
     const weekFresh = !uData?.weeklyStatsKey || uData.weeklyStatsKey === keys.weekKey;
     const monthFresh = !uData?.monthlyStatsKey || uData.monthlyStatsKey === keys.monthKey;
+    const mainDday = pickMainDday(uData?.ddays, uData?.mainDdayId);
+    const isDayOffToday = Boolean(uData?.dayMeta?.[keys.todayDateKey]?.isDayOff);
 
     const update: Record<string, any> = {
       status: memberStatus,
@@ -100,6 +102,9 @@ export function useGlobalRoomPresence() {
       todayStatsDate: keys.todayDateKey,
       weeklyStatsKey: keys.weekKey,
       monthlyStatsKey: keys.monthKey,
+      isDayOffToday,
+      mainDdayTitle: mainDday?.title ?? null,
+      mainDdayDate: mainDday?.targetDate ?? null,
     };
 
     if (finishedIso !== undefined) {
@@ -159,6 +164,9 @@ export function useGlobalRoomPresence() {
     userData?.todaySeconds,
     userData?.todaySessions,
     userData?.todayStatsDate,
+    userData?.ddays,
+    userData?.mainDdayId,
+    userData?.dayMeta,
     broadcastNow,
   ]);
 

@@ -2,11 +2,12 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Play, Pause, RotateCcw, Minimize2, Square, SlidersHorizontal } from "lucide-react";
+import { Play, Pause, RotateCcw, Minimize2, Square, SlidersHorizontal, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimerFaceStyle } from "@/lib/definitions";
 import { useTimerStyle, FullscreenTone } from "@/hooks/use-timer-style";
 import { usePewCat } from "@/hooks/use-pewcat";
+import { AMBIENT_PRESETS, AmbientSoundPreset, ambientSoundEngine } from "@/lib/ambient-sound";
 import { TimerPresentation } from "./timer-presentation";
 
 export interface FullscreenTimerProps {
@@ -70,6 +71,8 @@ export function FullscreenTimer({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [confirmReset, setConfirmReset] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
+  const [ambientPreset, setAmbientPreset] = useState<AmbientSoundPreset>(() => ambientSoundEngine.getPreset());
+  const [ambientVolume, setAmbientVolume] = useState(() => Math.round(ambientSoundEngine.getVolume() * 100));
   const [wakeStatus, setWakeStatus] = useState<"idle" | "active" | "unsupported">("idle");
   const [announcement, setAnnouncement] = useState("");
 
@@ -102,7 +105,16 @@ export function FullscreenTimer({
   useEffect(() => {
     if (!open) return;
     setFullscreenActive(true);
-    return () => setFullscreenActive(false);
+    setAmbientPreset(ambientSoundEngine.getPreset());
+    setAmbientVolume(Math.round(ambientSoundEngine.getVolume() * 100));
+    const unsub = ambientSoundEngine.subscribe(() => {
+      setAmbientPreset(ambientSoundEngine.getPreset());
+      setAmbientVolume(Math.round(ambientSoundEngine.getVolume() * 100));
+    });
+    return () => {
+      unsub();
+      setFullscreenActive(false);
+    };
   }, [open, setFullscreenActive]);
 
   useEffect(() => {
@@ -456,6 +468,52 @@ export function FullscreenTimer({
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider opacity-70">
+                <Volume2 className="h-3 w-3" />
+                Ambient Sound
+              </span>
+              {ambientPreset !== "off" && (
+                <span className="font-mono text-[11px] opacity-70">{ambientVolume}%</span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {AMBIENT_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => ambientSoundEngine.play(p.id, ambientVolume / 100)}
+                  className={cn(
+                    "min-h-[34px] rounded-[10px] border px-2 text-[11px] font-medium transition-colors truncate",
+                    ambientPreset === p.id
+                      ? "border-line bg-clay text-ink font-semibold"
+                      : isCharcoal
+                        ? "border-[#3E372F] bg-[#221F1B] text-[#A49B8F] hover:text-[#F2ECE1]"
+                        : "border-line/30 bg-surface-soft text-ink-muted hover:text-ink"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {ambientPreset !== "off" && (
+              <input
+                type="range"
+                min={5}
+                max={100}
+                value={ambientVolume}
+                aria-label="Fullscreen ambient sound volume"
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setAmbientVolume(v);
+                  ambientSoundEngine.setVolume(v / 100);
+                }}
+                className="w-full accent-[#D97745] h-1.5"
+              />
+            )}
           </div>
         </div>
       )}

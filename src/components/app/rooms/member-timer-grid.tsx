@@ -21,9 +21,11 @@ interface MemberTimerGridProps {
   currentUserId: string;
   roomId: string;
   onMemberClick: (member: RoomMember) => void;
+  onNudge?: (member: RoomMember) => void;
+  nudgeCooldowns?: Record<string, number>;
 }
 
-export function MemberTimerGrid({ members, currentUserId, onMemberClick }: MemberTimerGridProps) {
+export function MemberTimerGrid({ members, currentUserId, onMemberClick, onNudge, nudgeCooldowns }: MemberTimerGridProps) {
   const { handleModeChange, handleDurationChange, start, stop, isIdle } = useTimer();
   const { toast } = useToast();
   const [syncTarget, setSyncTarget] = useState<RoomMember | null>(null);
@@ -83,6 +85,8 @@ export function MemberTimerGrid({ members, currentUserId, onMemberClick }: Membe
             isCurrentUser={member.userId === currentUserId}
             onSyncRequest={setSyncTarget}
             onMemberClick={onMemberClick}
+            onNudge={onNudge}
+            nudgeCooldownUntil={nudgeCooldowns?.[member.userId] ?? 0}
           />
         ))}
       </div>

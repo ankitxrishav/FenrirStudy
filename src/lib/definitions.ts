@@ -28,6 +28,41 @@ export type Session = {
   focusScore: number;
   segments?: StudySegment[];
   clientSessionId?: string;
+  source?: 'timer' | 'manual';
+};
+
+export type DdayItem = {
+  id: string;
+  title: string;
+  targetDate: string; // yyyy-MM-dd
+};
+
+export type StudyTodo = {
+  id: string;
+  subjectId: string;
+  text: string;
+  dateKey: string; // yyyy-MM-dd
+  completed: boolean;
+  estimatedMinutes?: number;
+  createdAt: string;
+  completedAt?: string;
+};
+
+export type BreakLog = {
+  id: string;
+  dateKey: string;
+  startTime: string;
+  endTime: string;
+  durationSeconds: number;
+  tag: string;
+};
+
+export type DayMetaRecord = {
+  isDayOff?: boolean;
+  dayOffReason?: string;
+  closingRating?: number;
+  closingComment?: string;
+  breaks?: BreakLog[];
 };
 
 export type Goal = {
@@ -82,6 +117,10 @@ export type User = {
   todayStatsDate?: string;
   weeklyStatsKey?: string;
   monthlyStatsKey?: string;
+  ddays?: DdayItem[];
+  mainDdayId?: string | null;
+  studyTodos?: StudyTodo[];
+  dayMeta?: Record<string, DayMetaRecord>;
   fcmTokens?: string[]; // PWA push notification registration tokens
 };
 
@@ -213,6 +252,9 @@ export type RoomMember = {
   todayStatsDate?: string;
   weeklyStatsKey?: string;
   monthlyStatsKey?: string;
+  isDayOffToday?: boolean;
+  mainDdayTitle?: string | null;
+  mainDdayDate?: string | null;
 };
 
 export type RoomMessage = {

@@ -14,13 +14,20 @@ import {
   Users,
   ArrowRight,
   Clock,
+  Volume2,
+  CalendarClock,
+  CheckSquare,
+  Square as UncheckedSquare,
 } from "lucide-react";
 import { useTimer } from "@/hooks/use-timer";
 import { useTimerStyle, requestBrowserFullscreen } from "@/hooks/use-timer-style";
 import { useMyRooms } from "@/hooks/use-room";
+import { useYptExtras } from "@/hooks/use-ypt-extras";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { addDoc, collection, query, serverTimestamp, where } from "firebase/firestore";
 import type { Subject, TimerFaceStyle } from "@/lib/definitions";
+import { AMBIENT_PRESETS, AmbientSoundPreset, ambientSoundEngine } from "@/lib/ambient-sound";
+import { formatDdayBadge, formatLocalDateKey } from "@/lib/study-time";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -72,6 +79,17 @@ export default function Timer() {
 
   const { rooms, loading: roomsLoading } = useMyRooms();
   const { timerStyle, setTimerStyle } = useTimerStyle();
+  const { mainDday, studyTodos, toggleTodo } = useYptExtras();
+
+  const [ambientPreset, setAmbientPreset] = useState<AmbientSoundPreset>(() => ambientSoundEngine.getPreset());
+  const [ambientVolume, setAmbientVolume] = useState(() => Math.round(ambientSoundEngine.getVolume() * 100));
+
+  useEffect(() => {
+    return ambientSoundEngine.subscribe(() => {
+      setAmbientPreset(ambientSoundEngine.getPreset());
+      setAmbientVolume(Math.round(ambientSoundEngine.getVolume() * 100));
+    });
+  }, []);
 
   const subjectsQuery = useMemo(() => {
     return user && firestore
@@ -159,9 +177,23 @@ export default function Timer() {
     <div className="w-full max-w-2xl mx-auto space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            Personal Session
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+              Personal Session
+            </p>
+            {mainDday && (
+              <Link
+                href="/goals"
+                className="inline-flex items-center gap-1 rounded-full border border-line bg-highlight px-2.5 py-0.5 font-mono text-[11px] font-semibold text-ink hover:bg-highlight/80 transition-colors"
+              >
+                <CalendarClock className="h-3 w-3 text-clay" />
+                <span>{formatDdayBadge(mainDday.targetDate).label}</span>
+                <span className="text-ink-muted font-normal truncate max-w-[140px]">
+                  {mainDday.title}
+                </span>
+              </Link>
+            )}
+          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">
             Focus Timer
           </h1>
@@ -367,6 +399,55 @@ export default function Timer() {
                 })}
               </div>
             )}
+
+            <div className="pt-2 border-t border-line/10 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                  <Volume2 className="h-3.5 w-3.5 text-clay" />
+                  Ambient Sound
+                </span>
+                {ambientPreset !== "off" && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] text-ink-muted timer-digit">
+                      {ambientVolume}%
+                    </span>
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      value={ambientVolume}
+                      aria-label="Ambient sound volume"
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setAmbientVolume(v);
+                        ambientSoundEngine.setVolume(v / 100);
+                      }}
+                      className="w-24 accent-[var(--clay)] h-1.5"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {AMBIENT_PRESETS.map((p) => {
+                  const active = ambientPreset === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => ambientSoundEngine.play(p.id, ambientVolume / 100)}
+                      className={cn(
+                        "min-h-[32px] px-3 rounded-full font-mono text-[11px] border transition-colors",
+                        active
+                          ? "bg-ink border-line text-surface font-semibold"
+                          : "bg-surface-soft border-line/20 text-ink-muted hover:border-line hover:text-ink"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -482,6 +563,81 @@ export default function Timer() {
           )}
         </div>
       )}
+
+      {(() => {
+        const todayKey = formatLocalDateKey(Date.now());
+        const todayTasks = studyTodos.filter((t) => t.dateKey === todayKey);
+        const subMap = new Map((subjects ?? []).map((s) => [s.id, s]));
+        return (
+          <Card className="border-line bg-surface rounded-2xl">
+            <CardContent className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4 text-clay" />
+                  <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">
+                    Today&apos;s Subject To-Dos
+                  </span>
+                  {todayTasks.length > 0 && (
+                    <span className="font-mono text-[11px] text-ink-muted timer-digit">
+                      {todayTasks.filter((t) => t.completed).length}/{todayTasks.length}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  href="/routine"
+                  className="font-mono text-[11px] text-clay hover:underline"
+                >
+                  Manage tasks
+                </Link>
+              </div>
+              {todayTasks.length === 0 ? (
+                <p className="text-xs text-ink-muted">
+                  No subject tasks queued for today. Add checklists in Routines &rarr; To-Dos.
+                </p>
+              ) : (
+                <div className="divide-y divide-line/10">
+                  {todayTasks.slice(0, 6).map((todo) => {
+                    const sub = subMap.get(todo.subjectId);
+                    return (
+                      <button
+                        key={todo.id}
+                        type="button"
+                        onClick={() => toggleTodo(todo.id)}
+                        className="w-full flex items-center gap-2.5 py-2 text-left hover:bg-surface-soft/50 rounded-lg px-1.5 transition-colors"
+                      >
+                        {todo.completed ? (
+                          <CheckSquare className="h-4 w-4 text-success shrink-0" />
+                        ) : (
+                          <UncheckedSquare className="h-4 w-4 text-ink-muted shrink-0" />
+                        )}
+                        {sub && (
+                          <span
+                            className="h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: sub.color }}
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            "text-sm flex-1 truncate",
+                            todo.completed ? "line-through text-ink-muted" : "text-ink"
+                          )}
+                        >
+                          {todo.text}
+                        </span>
+                        {sub && (
+                          <span className="font-mono text-[10px] text-ink-muted shrink-0">
+                            {sub.name}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <AddSubjectDialog
         isOpen={isAddSubjectOpen}

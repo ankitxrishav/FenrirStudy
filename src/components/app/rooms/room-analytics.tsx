@@ -36,10 +36,22 @@ function getHeatLevel(hours: number): string {
   return "bg-clay";
 }
 
+const FOCUS_BUCKETS = [
+  { label: "0–20m", minSec: 0, maxSec: 1200 },
+  { label: "20–40m", minSec: 1200, maxSec: 2400 },
+  { label: "40–60m", minSec: 2400, maxSec: 3600 },
+  { label: "60–80m", minSec: 3600, maxSec: 4800 },
+  { label: "80–100m", minSec: 4800, maxSec: 6000 },
+  { label: "100–120m", minSec: 6000, maxSec: 7200 },
+  { label: "120m+", minSec: 7200, maxSec: Number.POSITIVE_INFINITY },
+];
+
 export function RoomAnalytics({ members }: RoomAnalyticsProps) {
   const firestore = useFirestore();
   const [dayData, setDayData] = useState<DayData[]>([]);
   const [subjectData, setSubjectData] = useState<SubjectData[]>([]);
+  const [histogram, setHistogram] = useState<{ label: string; count: number; totalSeconds: number }[]>([]);
+  const [summaryStats, setSummaryStats] = useState({ totalSeconds: 0, avgDailySec: 0, avgBlockSec: 0, longestBlockSec: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -91,26 +103,53 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
           dayMap.set(formatLocalDateKey(addLocalDaysMs(start84, i)), 0);
         }
 
+        const bucketCounts = FOCUS_BUCKETS.map((b) => ({ label: b.label, count: 0, totalSeconds: 0 }));
+        let totalFocusMs = 0;
+        let sessionCount = 0;
+        let longestBlockSec = 0;
+
         const subjectMap = new Map<string, number>();
         allSessions.forEach((s) => {
           const intervals = resolveSessionIntervals(s);
+          let sessMs = 0;
           for (const iv of intervals) {
             const slices = splitIntervalByLocalDays(iv.startMs, iv.endMs);
             for (const sl of slices) {
               if (sl.startMs >= start84 && sl.startMs <= todayStart + 86_400_000) {
                 dayMap.set(sl.dateKey, (dayMap.get(sl.dateKey) ?? 0) + sl.durationMs);
                 subjectMap.set(s.subjectId, (subjectMap.get(s.subjectId) ?? 0) + sl.durationMs);
+                sessMs += sl.durationMs;
+                totalFocusMs += sl.durationMs;
               }
+            }
+          }
+          if (sessMs > 0) {
+            const sec = Math.round(sessMs / 1000);
+            sessionCount++;
+            if (sec > longestBlockSec) longestBlockSec = sec;
+            const bIdx = FOCUS_BUCKETS.findIndex((b) => sec >= b.minSec && sec < b.maxSec);
+            if (bIdx >= 0) {
+              bucketCounts[bIdx].count++;
+              bucketCounts[bIdx].totalSeconds += sec;
             }
           }
         });
 
-        setDayData(
-          Array.from(dayMap.entries()).map(([date, ms]) => ({
-            date,
-            totalSeconds: Math.round(ms / 1000),
-          }))
-        );
+        const dayEntries = Array.from(dayMap.entries()).map(([date, ms]) => ({
+          date,
+          totalSeconds: Math.round(ms / 1000),
+        }));
+        setDayData(dayEntries);
+        setHistogram(bucketCounts);
+
+        const activeDays = dayEntries.filter((d) => d.totalSeconds > 0).length;
+        const totalSeconds = Math.round(totalFocusMs / 1000);
+        setSummaryStats({
+          totalSeconds,
+          avgDailySec: activeDays > 0 ? Math.round(totalSeconds / activeDays) : 0,
+          avgBlockSec: sessionCount > 0 ? Math.round(totalSeconds / sessionCount) : 0,
+          longestBlockSec,
+        });
 
         const sorted = Array.from(subjectMap.entries())
           .map(([subjectId, totalMs]) => {
@@ -153,6 +192,63 @@ export function RoomAnalytics({ members }: RoomAnalyticsProps) {
         <p className="text-center text-ink-muted text-sm py-8">Loading analytics...</p>
       ) : (
         <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Room Total (84d)", val: `${(summaryStats.totalSeconds / 3600).toFixed(1)}h` },
+              { label: "Active Daily Avg", val: `${(summaryStats.avgDailySec / 3600).toFixed(1)}h` },
+              { label: "Avg Focus Block", val: `${Math.round(summaryStats.avgBlockSec / 60)}m` },
+              { label: "Longest Block", val: `${Math.round(summaryStats.longestBlockSec / 60)}m` },
+            ].map((k) => (
+              <Card key={k.label} className="border-line bg-surface">
+                <CardContent className="p-3.5">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                    {k.label}
+                  </p>
+                  <p className="font-mono text-xl font-bold text-ink timer-digit mt-1">{k.val}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {histogram.some((b) => b.count > 0) && (() => {
+            const maxCount = Math.max(1, ...histogram.map((b) => b.count));
+            return (
+              <Card className="border-line bg-surface">
+                <CardHeader className="pb-3 border-b border-line/15">
+                  <CardTitle className="font-mono text-xs uppercase tracking-wider text-ink-muted">
+                    20-Min Continuous Focus Histogram
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-7 gap-2 items-end h-28 pt-2">
+                    {histogram.map((b) => {
+                      const pct = Math.max(6, Math.round((b.count / maxCount) * 100));
+                      return (
+                        <div key={b.label} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                          <span className="font-mono text-[10px] text-ink timer-digit">
+                            {b.count > 0 ? b.count : ""}
+                          </span>
+                          <div className="w-full flex items-end justify-center h-16">
+                            <div
+                              className={cn(
+                                "w-full max-w-[32px] rounded-t-md border border-line/30",
+                                b.count > 0 ? "bg-clay" : "bg-surface-muted"
+                              )}
+                              style={{ height: `${b.count > 0 ? pct : 10}%` }}
+                            />
+                          </div>
+                          <span className="font-mono text-[9px] text-ink-muted whitespace-nowrap">
+                            {b.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           <Card id="analytics-panel" className="border-line bg-surface">
             <CardHeader className="pb-3 border-b border-line/15">
               <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">

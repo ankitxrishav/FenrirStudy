@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Flame, Target, Loader2, Award } from "lucide-react";
-import { doc, updateDoc, query, collection, where } from "firebase/firestore";
-import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
-import { User, Session } from "@/lib/definitions";
+import React, { useEffect, useMemo, useState } from "react";
+import { Calendar, Flame, Loader2, Pin, Plus, Target, Trash2 } from "lucide-react";
+import { collection, doc, query, updateDoc, where } from "firebase/firestore";
+import { useCollection, useFirestore, useUser } from "@/firebase";
+import { Session } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
+import { useYptExtras } from "@/hooks/use-ypt-extras";
+import { computePeriodicStats, computeStudyStatistics, formatDdayBadge } from "@/lib/study-time";
 import LoadingScreen from "@/components/app/loading-screen";
-import { computePeriodicStats, computeStudyStatistics } from "@/lib/study-time";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,19 +19,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 
 export default function GoalsPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const { userData, ddays, mainDdayId, addDday, pinMainDday, deleteDday } = useYptExtras();
+
   const userDocRef = useMemo(
     () => (user && firestore ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
-  const { data: userData, loading: docLoading } = useDoc<User>(userDocRef);
 
   const sessionsQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -39,16 +44,22 @@ export default function GoalsPage() {
   const statsSummary = useMemo(() => {
     if (!allSessions) return null;
     const target = userData?.settings?.studyTargetHours ?? 2;
-    return computeStudyStatistics(allSessions, [], target);
-  }, [allSessions, userData?.settings?.studyTargetHours]);
+    return computeStudyStatistics(allSessions, [], target, Date.now(), {
+      dayMeta: userData?.dayMeta,
+      todos: userData?.studyTodos,
+    });
+  }, [allSessions, userData?.settings?.studyTargetHours, userData?.dayMeta, userData?.studyTodos]);
 
   const todayStudySeconds = useMemo(() => {
     if (!allSessions) return 0;
     return computePeriodicStats(allSessions).today.seconds;
   }, [allSessions]);
 
-  const [studyTarget, setStudyTarget] = useState(1);
+  const [studyTarget, setStudyTarget] = useState(2);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [ddayTitle, setDdayTitle] = useState("");
+  const [ddayDate, setDdayDate] = useState("");
 
   useEffect(() => {
     if (userData?.settings?.studyTargetHours) {
@@ -78,22 +89,32 @@ export default function GoalsPage() {
     }
   };
 
-  if (userLoading || docLoading || !user) {
+  const handleAddDday = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ddayTitle.trim() || !ddayDate) return;
+    await addDday(ddayTitle, ddayDate);
+    setDdayTitle("");
+    setDdayDate("");
+    toast({ title: "D-Day countdown added" });
+  };
+
+  if (userLoading || !user) {
     return <LoadingScreen />;
   }
 
   const studyProgress = Math.min(100, (todayStudySeconds / (studyTarget * 3600)) * 100);
   const loggedMinutes = Math.round(todayStudySeconds / 60);
+  const todayKey = statsSummary?.periodKeys.todayDateKey;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-8">
       <div className="space-y-1">
         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-          Daily Target
+          Daily Target &amp; Exam Countdowns
         </p>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Goals & Streak</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">Goals, Streak &amp; D-Day</h1>
         <p className="text-sm text-ink-muted">
-          Set your daily hours goal and maintain consistency.
+          Set your daily hours goal, protect streaks with Day Off days, and track exam countdowns.
         </p>
       </div>
 
@@ -172,15 +193,116 @@ export default function GoalsPage() {
                 {statsSummary?.core.currentStreak ?? userData?.streak ?? 0}
               </div>
               <p className="font-mono text-xs uppercase tracking-[0.16em] text-ink-muted mt-1">
-                Day Streak {statsSummary?.core.bestStreak ? `· Best ${statsSummary.core.bestStreak}d` : ''}
+                Day Streak {statsSummary?.core.bestStreak ? `· Best ${statsSummary.core.bestStreak}d` : ""}
               </p>
             </div>
             <p className="text-sm text-ink-muted max-w-xs">
-              Log study time each day before midnight to keep your streak active.
+              Log study time each day before midnight or mark rest dates as Day Off in History to protect your streak.
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* YPT D-Day Exam Countdowns */}
+      <Card className="border-line bg-surface rounded-3xl">
+        <CardHeader className="border-b border-line/15">
+          <CardTitle className="flex items-center gap-2 text-lg text-ink">
+            <Calendar className="h-5 w-5 text-clay" />
+            D-Day Exam Countdowns
+          </CardTitle>
+          <CardDescription className="text-ink-muted">
+            Pin your primary exam countdown to display it on Overview and Focus Timer across Web &amp; Android.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-5 space-y-5">
+          <form onSubmit={handleAddDday} className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <Input
+              value={ddayTitle}
+              onChange={(e) => setDdayTitle(e.target.value)}
+              placeholder="Exam or milestone (e.g. Finals, GATE)"
+              className="sm:col-span-6 bg-surface-soft"
+            />
+            <Input
+              type="date"
+              value={ddayDate}
+              onChange={(e) => setDdayDate(e.target.value)}
+              className="sm:col-span-4 bg-surface-soft"
+            />
+            <Button
+              type="submit"
+              className="sm:col-span-2 rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add</span>
+            </Button>
+          </form>
+
+          {ddays.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-line/30 py-8 text-center text-sm text-ink-muted">
+              No countdowns yet. Add your exam date above.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {ddays.map((item) => {
+                const badge = formatDdayBadge(item.targetDate, todayKey);
+                const isPinned = item.id === mainDdayId;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "rounded-2xl border p-4 flex items-center justify-between gap-3",
+                      isPinned ? "border-line bg-highlight/40" : "border-line/25 bg-surface-soft"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-ink text-surface font-mono text-xs">
+                          {badge.label}
+                        </Badge>
+                        {isPinned && (
+                          <Badge variant="outline" className="font-mono text-[10px]">
+                            Main
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="font-semibold text-sm text-ink truncate mt-1.5">
+                        {item.title}
+                      </p>
+                      <p className="font-mono text-[11px] text-ink-muted">
+                        {item.targetDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!isPinned && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          title="Pin as main D-Day"
+                          onClick={() => pinMainDday(item.id)}
+                          className="h-8 w-8 rounded-full text-ink-muted hover:text-ink"
+                        >
+                          <Pin className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        title="Delete countdown"
+                        onClick={() => deleteDday(item.id)}
+                        className="h-8 w-8 rounded-full text-ink-muted hover:text-danger"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, use } from "react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { useRoom, leaveRoom } from "@/hooks/use-room";
+import { useRoom, leaveRoom, sendMessage } from "@/hooks/use-room";
 import { usePresenceSync } from "@/hooks/use-presence-sync";
 import { useRoomPresence, useFinishBroadcast } from "@/hooks/use-room-presence";
 import { setActiveRoomCookie } from "@/lib/routing-cookies";
@@ -92,6 +92,37 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [selectedMember, setSelectedMember] = useState<RoomMember | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"focus" | "timer">("focus");
   const [chatOpen, setChatOpen] = useState(true);
+  const [nudgeCooldowns, setNudgeCooldowns] = useState<Record<string, number>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(`fenrir_nudge_${roomId}`);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const handleWakeNudge = async (target: RoomMember) => {
+    if (!firestore || !user) return;
+    const now = Date.now();
+    if ((nudgeCooldowns[target.userId] ?? 0) > now) return;
+    const nextUntil = now + 2 * 60 * 60 * 1000;
+    const nextMap = { ...nudgeCooldowns, [target.userId]: nextUntil };
+    setNudgeCooldowns(nextMap);
+    try {
+      localStorage.setItem(`fenrir_nudge_${roomId}`, JSON.stringify(nextMap));
+    } catch {}
+    await sendMessage(
+      firestore,
+      user,
+      roomId,
+      `Wake-up nudge for @${target.displayName || "study partner"} — jump back into focus!`
+    );
+    toast({
+      title: `Wake-up nudge sent to ${target.displayName || "partner"}`,
+      description: "2-hour cooldown active for this member.",
+    });
+  };
 
   const subjectsQuery = useMemo(
     () =>
@@ -371,6 +402,8 @@ export default function RoomPage({ params }: RoomPageProps) {
               currentUserId={user.uid}
               roomId={roomId}
               onMemberClick={setSelectedMember}
+              onNudge={handleWakeNudge}
+              nudgeCooldowns={nudgeCooldowns}
             />
           </RoomErrorBoundary>
 
@@ -404,7 +437,13 @@ export default function RoomPage({ params }: RoomPageProps) {
 
             {activePanel === "members" && (
               <RoomErrorBoundary fallbackLabel="Could not load participants.">
-                <MemberGrid roomId={roomId} members={members} subjects={subjects ?? []} />
+                <MemberGrid
+                  roomId={roomId}
+                  members={members}
+                  subjects={subjects ?? []}
+                  onNudge={handleWakeNudge}
+                  nudgeCooldowns={nudgeCooldowns}
+                />
               </RoomErrorBoundary>
             )}
             {activePanel === "leaderboard" && (

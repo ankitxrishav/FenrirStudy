@@ -1,475 +1,603 @@
 "use client";
 
-import { Overview } from "@/components/app/dashboard/overview";
-import { RecentSessions } from "@/components/app/dashboard/recent-sessions";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useUser, useFirestore, useCollection } from "@/firebase";
-import {
-    Activity,
-    Target,
-    TrendingUp,
-    Zap,
-    Clock,
-    BarChart3,
-    Calendar,
-    PieChart,
-    Flame,
-    Sun,
-    Moon,
-    ZapOff,
-    ArrowUpRight,
-    ArrowDownRight,
-    Repeat2,
-    Users,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { collection, query, where } from "firebase/firestore";
-import { Session, User, Subject } from "@/lib/definitions";
-import { useDoc } from "@/firebase";
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Calendar,
+  CheckSquare,
+  Clock,
+  Coffee,
+  Download,
+  Flame,
+  Moon,
+  PieChart,
+  Repeat2,
+  Sparkles,
+  Sun,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
+  ZapOff,
+} from "lucide-react";
+import { collection, doc, query, where } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
+import { Session, Subject, User } from "@/lib/definitions";
 import { useMyRooms } from "@/hooks/use-room";
-import { doc } from "firebase/firestore";
-import LoadingScreen from "@/components/app/loading-screen";
-import { cn } from "@/lib/utils";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
-import { motion, AnimatePresence } from "framer-motion";
-import { calculateUserLevel } from "@/lib/level";
 import { useHabits } from "@/hooks/use-habits";
+import { calculateUserLevel } from "@/lib/level";
+import {
+  buildStudyReportCsv,
+  formatDdayBadge,
+  formatMinuteOfDay,
+  pickMainDday,
+} from "@/lib/study-time";
+import LoadingScreen from "@/components/app/loading-screen";
+import { Overview } from "@/components/app/dashboard/overview";
+import { RecentSessions } from "@/components/app/dashboard/recent-sessions";
 import { HabitAnalytics } from "@/components/app/dashboard/habit-analytics";
+import { YptInsights } from "@/components/app/dashboard/ypt-insights";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-type DashboardTab = 'overview' | 'habits';
+type DashboardTab = "overview" | "insights" | "habits";
 
 function formatDuration(seconds: number) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m`;
-    return "0m";
+  const s = Math.max(0, Math.round(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return "0m";
 }
 
 export default function DashboardPage() {
-    const { user, loading: userLoading } = useUser();
-    const firestore = useFirestore();
-    const router = useRouter();
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
 
-    const userDocRef = useMemo(() => (user && firestore ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-    const { data: userData } = useDoc<User>(userDocRef);
+  const userDocRef = useMemo(
+    () => (user && firestore ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData } = useDoc<User>(userDocRef);
 
-    const [tab, setTab] = useState<DashboardTab>(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('dashboard-tab');
-            return (stored as DashboardTab) || 'overview';
-        }
-        return 'overview';
-    });
-
-    const handleTabChange = (newTab: DashboardTab) => {
-        setTab(newTab);
-        localStorage.setItem('dashboard-tab', newTab);
-    };
-
-    useEffect(() => {
-        if (!userLoading && !user) {
-            router.push('/login');
-        }
-    }, [user, userLoading, router]);
-
-    const sessionsQuery = useMemo(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, 'sessions'), where('userId', '==', user.uid));
-    }, [user, firestore]);
-
-    const subjectsQuery = useMemo(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, 'subjects'), where('userId', '==', user.uid));
-    }, [user, firestore]);
-
-    const { data: allSessions, loading: sessionsLoading } = useCollection<Session>(sessionsQuery);
-    const { data: allSubjects } = useCollection<Subject>(subjectsQuery);
-
-    const dailyTarget = userData?.settings?.studyTargetHours ?? 2;
-    const stats = useDashboardStats(allSessions, allSubjects, dailyTarget);
-
-    const allTimeSeconds = stats?.core.timeAllTime ?? 0;
-    const allTimeSessions = stats?.core.totalSessions ?? 0;
-    const userLevel = calculateUserLevel(allTimeSeconds, allTimeSessions);
-
-    // Fetch habits for analytics
-    const { analytics: habitAnalytics } = useHabits(new Date());
-
-    // Fetch rooms for Active Rooms section
-    const { rooms } = useMyRooms();
-
-    if (userLoading || sessionsLoading || !user || !stats) {
-        return <LoadingScreen />;
+  const [tab, setTab] = useState<DashboardTab>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("dashboard-tab");
+      if (stored === "overview" || stored === "insights" || stored === "habits") {
+        return stored;
+      }
     }
+    return "overview";
+  });
 
-    return (
-        <div className="flex-col md:flex relative">
-            <div className="flex-1 space-y-10 p-8 pt-6 max-w-7xl mx-auto w-full">
+  const handleTabChange = (newTab: DashboardTab) => {
+    setTab(newTab);
+    localStorage.setItem("dashboard-tab", newTab);
+  };
 
-                {/* Header Phase */}
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-8">
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex items-center gap-2 text-primary mb-1">
-                                <Activity className="h-5 w-5" />
-                                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Analytics</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <h1 className="text-6xl font-black tracking-tighter text-gradient">
-                                    Dashboard
-                                </h1>
-                                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold shadow-sm border border-primary/20 flex flex-col items-center justify-center translate-y-1">
-                                    <span className="text-[10px] uppercase tracking-wider opacity-80 leading-none mb-1">Level</span>
-                                    <span className="text-2xl leading-none">{userLevel}</span>
-                                </div>
-                            </div>
-                            <p className="text-muted-foreground text-sm mt-3 max-w-sm">Clear analysis of your study habits and focus performance.</p>
-                        </div>
-                    </div>
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, userLoading, router]);
 
-                    {/* Layer 5: Personalized Insights (Premium) */}
-                    <div className="flex flex-col gap-3 max-w-sm w-full">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Zap className="h-4 w-4 text-primary fill-primary animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Study Insights</span>
-                        </div>
-                        {stats.insights.map((insight, i) => (
-                            <div key={i} className="relative group overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                <div className="glass p-4 rounded-2xl border border-primary/20 flex items-start gap-3 animate-in fade-in slide-in-from-right duration-700 relative z-10" style={{ animationDelay: `${i * 100}ms` }}>
-                                    <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                                    <p className="text-[12px] font-bold leading-relaxed text-foreground/90">{insight}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+  const sessionsQuery = useMemo(
+    () =>
+      user && firestore
+        ? query(collection(firestore, "sessions"), where("userId", "==", user.uid))
+        : null,
+    [user, firestore]
+  );
+  const subjectsQuery = useMemo(
+    () =>
+      user && firestore
+        ? query(collection(firestore, "subjects"), where("userId", "==", user.uid))
+        : null,
+    [user, firestore]
+  );
 
-                {/* Dashboard Tabs */}
-                <div className="flex gap-1 p-1 rounded-2xl bg-secondary/50 border border-border w-fit">
-                    {(['overview', 'habits'] as DashboardTab[]).map(t => (
-                        <button
-                            key={t}
-                            onClick={() => handleTabChange(t)}
-                            className={cn(
-                                'relative px-6 py-2 rounded-xl text-sm font-bold capitalize transition-all duration-200 min-w-[120px]',
-                                tab === t ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
-                            {tab === t && (
-                                <motion.div
-                                    layoutId="dashboard-tab-bg"
-                                    className="absolute inset-0 rounded-xl bg-primary shadow-md shadow-primary/20"
-                                    transition={{ type: 'spring', bounce: 0.25, duration: 0.4 }}
-                                />
-                            )}
-                            <span className="relative z-10 flex items-center justify-center gap-1.5">
-                                {t === 'overview' ? <PieChart className="h-4 w-4" /> : <Repeat2 className="h-4 w-4" />}
-                                {t}
-                            </span>
-                        </button>
-                    ))}
-                </div>
+  const { data: allSessions, loading: sessionsLoading } = useCollection<Session>(sessionsQuery);
+  const { data: allSubjects } = useCollection<Subject>(subjectsQuery);
 
-                <AnimatePresence mode="wait">
-                    {tab === 'overview' ? (
-                        <motion.div
-                            key="overview"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-10"
-                        >
-                            {/* Layer 1: Core Productivity */}
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Focus Today</span>
-                                            <Clock className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.timeToday)}</div>
-                                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                                            <div className={cn(
-                                                "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full",
-                                                stats.core.dailyComparisonPct >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                                            )}>
-                                                {stats.core.dailyComparisonPct >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                                                {Math.abs(Math.round(stats.core.dailyComparisonPct))}%
-                                            </div>
-                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                                                VS YEST ({formatDuration(stats.core.timeYesterday)})
-                                            </span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+  const dailyTarget = userData?.settings?.studyTargetHours ?? 2;
+  const statsOptions = useMemo(
+    () => ({
+      dayMeta: userData?.dayMeta,
+      todos: userData?.studyTodos,
+    }),
+    [userData?.dayMeta, userData?.studyTodos]
+  );
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Daily Goal ({dailyTarget}h)</span>
-                                            <Target className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{Math.round(stats.core.goalProgressPct)}%</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">
-                                            Streak {stats.core.currentStreak}d (Best {stats.core.bestStreak}d)
-                                        </p>
-                                    </CardContent>
-                                </Card>
+  const stats = useDashboardStats(allSessions, allSubjects, dailyTarget, statsOptions);
+  const { analytics: habitAnalytics } = useHabits(new Date());
+  const { rooms } = useMyRooms();
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Daily Avg / Week</span>
-                                            <BarChart3 className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerWeek)}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 7)</p>
-                                    </CardContent>
-                                </Card>
+  const mainDday = useMemo(
+    () => pickMainDday(userData?.ddays, userData?.mainDdayId),
+    [userData?.ddays, userData?.mainDdayId]
+  );
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Daily Avg / Month</span>
-                                            <Calendar className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgTimePerMonth)}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Active Days (Last 30)</p>
-                                    </CardContent>
-                                </Card>
+  if (userLoading || sessionsLoading || !user || !stats) {
+    return <LoadingScreen />;
+  }
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Avg Period</span>
-                                            <Activity className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.avgSessionDuration)}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">Average session</p>
-                                    </CardContent>
-                                </Card>
+  const userLevel = calculateUserLevel(stats.core.timeAllTime, stats.core.totalSessions);
+  const ddayBadge = mainDday
+    ? formatDdayBadge(mainDday.targetDate, stats.periodKeys.todayDateKey)
+    : null;
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Max Focus &amp; Records</span>
-                                            <Flame className="h-3 w-3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black tracking-tighter">{formatDuration(stats.core.longestSession)}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-4 uppercase tracking-widest">
-                                            Best Day {stats.core.bestDay ? formatDuration(stats.core.bestDay.seconds) : '0m'} · All-Time {formatDuration(stats.core.timeAllTime)}
-                                        </p>
-                                    </CardContent>
-                                </Card>
+  const handleExportCsv = () => {
+    const csv = buildStudyReportCsv(allSessions ?? [], allSubjects ?? [], userData?.dayMeta);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fenrirstudy-report-${stats.periodKeys.todayDateKey}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-                                <Card className="glass-card overflow-hidden group">
-                                    <CardHeader className="pb-2 space-y-0">
-                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                                            <span>Study Rhythm</span>
-                                            {stats.behavior.rhythm === 'Night Owl' ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-black tracking-tighter uppercase text-gradient">{stats.behavior.rhythm}</div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-6 uppercase tracking-widest">Your focus rhythm</p>
-                                    </CardContent>
-                                </Card>
-                            </div>
+  return (
+    <div className="space-y-7 pb-10">
+      {/* Header Row */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5 text-clay" />
+              Analytics &amp; YPT Insights
+            </span>
+            <Badge className="bg-highlight text-ink border border-line font-mono text-[11px]">
+              Level {userLevel}
+            </Badge>
+            <Badge variant="outline" className="font-mono text-[11px] gap-1">
+              <Flame className="h-3 w-3 text-clay" />
+              {stats.core.currentStreak}d Streak
+            </Badge>
+            {mainDday && ddayBadge && (
+              <Link href="/goals">
+                <Badge className="bg-clay text-ink border border-line font-mono text-[11px]">
+                  {ddayBadge.label} · {mainDday.title}
+                </Badge>
+              </Link>
+            )}
+          </div>
 
-                            {/* Layer 2: Intelligence & History */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                <Card className="lg:col-span-8 glass border-white/10 shadow-2xl p-6 h-fit md:h-[450px]">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div className="space-y-1">
-                                            <h3 className="text-sm font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-                                                <TrendingUp className="h-4 w-4 text-primary" /> Progress Trend
-                                            </h3>
-                                            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Weekly flow trend</p>
-                                        </div>
-                                        <div className="text-[10px] font-bold text-muted-foreground bg-white/5 px-3 py-1 rounded-md uppercase tracking-widest">Last 168 Hours</div>
-                                    </div>
-                                    <div className="h-[300px]">
-                                        <Overview sessions={allSessions ?? []} />
-                                    </div>
-                                </Card>
+          <div className="flex flex-wrap items-center gap-4">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink">
+              Study Overview
+            </h1>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="rounded-full border-line bg-surface hover:bg-surface-soft gap-1.5"
+            >
+              <Download className="h-3.5 w-3.5 text-clay" />
+              <span>Export CSV</span>
+            </Button>
+          </div>
 
-                                <Card className="lg:col-span-4 glass border-white/10 shadow-2xl overflow-hidden flex flex-col h-[450px]">
-                                    <CardHeader className="border-b border-white/5 p-6 bg-white/[0.01]">
-                                        <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Recent Rituals</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-6 overflow-y-auto flex-1 custom-scrollbar text-gradient">
-                                        <RecentSessions />
-                                    </CardContent>
-                                    <div className="p-4 border-t border-white/5 text-center bg-white/[0.01]">
-                                        <button onClick={() => router.push('/history')} className="text-[10px] font-black text-primary uppercase tracking-[0.3em] hover:tracking-[0.4em] transition-all">
-                                            ACCESS TEMPORAL ARCHIVE →
-                                        </button>
-                                    </div>
-                                </Card>
-                            </div>
-
-                            {/* Layer 3: Subject Focus */}
-                            <Card className="w-full glass border-white/10 shadow-2xl flex flex-col">
-                                <CardHeader className="border-b border-white/5 p-6">
-                                    <div className="flex items-center gap-2 text-primary mb-1">
-                                        <PieChart className="h-4 w-4" />
-                                        <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Subject Focus</CardTitle>
-                                    </div>
-                                    <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground/40">Subject priority and balance</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-6 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                        {stats.subjects.distribution.map((sub, i) => (
-                                            <div key={i} className="space-y-3 group">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sub.color }} />
-                                                        <span className="text-sm font-bold tracking-tight">{sub.name}</span>
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">{formatDuration(sub.totalTime)}</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                                    <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${sub.consistency}%` }}
-                                                        className="h-full rounded-full transition-all duration-1000"
-                                                        style={{ backgroundColor: sub.color }}
-                                                    />
-                                                </div>
-                                                <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
-                                                    <span>Rituals: {sub.sessionCount}</span>
-                                                    <span>Stability: {Math.round(sub.consistency)}%</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {stats.subjects.neglected.length > 0 && (
-                                        <div className="mt-8 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
-                                            <ZapOff className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                                            <div>
-                                                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Balance Alert</p>
-                                                <p className="text-[10px] leading-tight text-amber-500/60 font-medium">
-                                                    {stats.subjects.neglected.join(", ")} {stats.subjects.neglected.length > 1 ? 'have' : 'has'} fallen below the threshold.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* Level 3: Time & Behavior Heatmap (Bottom Layer) */}
-                            <Card className="w-full glass border-white/10 shadow-2xl overflow-hidden mt-6">
-                                <CardHeader className="border-b border-white/5 p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-primary">
-                                                <Calendar className="h-4 w-4" />
-                                                <CardTitle className="text-sm font-bold uppercase tracking-[0.2em]">Time Distribution</CardTitle>
-                                            </div>
-                                            <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground/40">Productivity Heatmap by Hour</CardDescription>
-                                        </div>
-                                        <div className="text-[10px] font-black tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">
-                                            Peak: {stats.behavior.bestHour.label}
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-8">
-                                    <div className="flex flex-col gap-4 h-[250px] w-full">
-                                        {/* Bar Layer */}
-                                        <div className="flex-1 flex items-end justify-between gap-1 h-full">
-                                            {stats.behavior.hourHeatmap.map((h, i) => {
-                                                const maxTotal = stats.behavior.bestHour.total || 1;
-                                                const percentageHeight = (h.total / maxTotal) * 100;
-                                                const hasData = h.total > 0;
-
-                                                return (
-                                                    <div key={i} className="flex-1 h-full flex flex-col justify-end group/bar">
-                                                        <div
-                                                            className="w-full rounded-t-lg transition-all duration-500 hover:bg-primary shadow-[0_0_20px_rgba(var(--primary),0.2)]"
-                                                            style={{
-                                                                height: `${Math.max(hasData ? 8 : 4, percentageHeight)}%`,
-                                                                backgroundColor: hasData ? `hsl(var(--primary) / ${Math.max(0.2, h.total / maxTotal)})` : 'transparent',
-                                                                border: hasData ? `1px solid hsl(var(--primary) / 0.3)` : '1px dashed hsl(var(--muted-foreground) / 0.1)'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Label Layer (Aligned track) */}
-                                        <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                                            {[0, 4, 8, 12, 16, 20].map((hour) => (
-                                                <div key={hour} className="flex-1 text-center">
-                                                    <span className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-widest">
-                                                        {stats.behavior.hourHeatmap[hour].label}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            {/* Active Rooms */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-primary" />
-                                    <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Active Rooms</h3>
-                                </div>
-                                {rooms.length === 0 ? (
-                                    <Link href="/rooms" className="block">
-                                        <div className="glass border border-white/10 rounded-xl px-5 py-4 text-sm text-muted-foreground hover:border-primary/30 transition-colors">
-                                            Join a study room to stay accountable with others &rarr;
-                                        </div>
-                                    </Link>
-                                ) : (
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                        {rooms.map(room => (
-                                            <div key={room.id} className="glass border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between hover:border-primary/30 transition-colors">
-                                                <div className="min-w-0">
-                                                    <p className="font-semibold text-sm truncate">{room.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}</p>
-                                                </div>
-                                                <Link href={`/rooms/${room.id}`} className="text-xs font-bold text-primary hover:underline shrink-0 ml-3">
-                                                    Open &rarr;
-                                                </Link>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="habits"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <HabitAnalytics analytics={habitAnalytics} />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+          <p className="text-sm text-ink-muted max-w-xl">
+            Calendar-accurate session math, continuous focus blocks, study vs. rest balance, and 4-month patterns.
+          </p>
         </div>
-    );
+
+        {/* Dynamic Insights Stack */}
+        {stats.insights.length > 0 && (
+          <div className="flex flex-col gap-2 lg:max-w-sm w-full">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-clay" />
+              Key Takeaways
+            </span>
+            {stats.insights.map((insight, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-line/25 bg-surface px-4 py-2.5 text-xs font-medium text-ink flex items-start gap-2.5"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-clay mt-1.5 shrink-0" />
+                <span>{insight}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Editorial Pill Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-line bg-surface p-1">
+          {([
+            { id: "overview", label: "Overview", icon: PieChart },
+            { id: "insights", label: "YPT Insights", icon: Sparkles },
+            { id: "habits", label: "Habits & To-Dos", icon: Repeat2 },
+          ] as const).map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleTabChange(t.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors",
+                  active
+                    ? "bg-ink text-surface"
+                    : "text-ink-muted hover:text-ink hover:bg-surface-soft"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-mono text-ink-muted">
+          <span>Today To-Dos:</span>
+          <Badge variant="outline" className="font-mono text-xs gap-1">
+            <CheckSquare className="h-3 w-3 text-clay" />
+            {stats.todos.todayCompleted}/{stats.todos.todayTotal} ({stats.todos.todayAchievementPct}%)
+          </Badge>
+        </div>
+      </div>
+
+      {tab === "overview" && (
+        <div className="space-y-6">
+          {/* Primary Metric Grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-line bg-surface rounded-3xl">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  <span>Focus Today</span>
+                  <Clock className="h-3.5 w-3.5 text-clay" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tabular-nums text-ink">
+                  {formatDuration(stats.core.timeToday)}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full border",
+                      stats.core.dailyComparisonPct >= 0
+                        ? "bg-highlight border-line text-ink"
+                        : "bg-surface-soft border-line/30 text-ink-muted"
+                    )}
+                  >
+                    {stats.core.dailyComparisonPct >= 0 ? (
+                      <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3 mr-0.5" />
+                    )}
+                    {Math.abs(Math.round(stats.core.dailyComparisonPct))}%
+                  </span>
+                  <span className="font-mono text-[11px] text-ink-muted">
+                    Yest: {formatDuration(stats.core.timeYesterday)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-line bg-surface rounded-3xl">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  <span>Daily Goal ({dailyTarget}h)</span>
+                  <Target className="h-3.5 w-3.5 text-clay" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tabular-nums text-ink">
+                  {Math.round(stats.core.goalProgressPct)}%
+                </div>
+                <p className="font-mono text-[11px] text-ink-muted mt-3">
+                  Streak {stats.core.currentStreak}d · Best {stats.core.bestStreak}d
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-line bg-surface rounded-3xl">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  <span>Avg (Excl. Day Off)</span>
+                  <BarChart3 className="h-3.5 w-3.5 text-clay" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tabular-nums text-ink">
+                  {formatDuration(stats.core.avgExclDayOffSeconds)}
+                </div>
+                <p className="font-mono text-[11px] text-ink-muted mt-3">
+                  7d Active Avg: {formatDuration(stats.core.avgTimePerWeek)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-line bg-surface rounded-3xl">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  <span>Efficiency &amp; Max Block</span>
+                  <Coffee className="h-3.5 w-3.5 text-clay" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tabular-nums text-ink">
+                  {stats.breaks.focusEfficiencyPct}%
+                </div>
+                <p className="font-mono text-[11px] text-ink-muted mt-3">
+                  Max block {formatDuration(stats.core.maxContinuousSeconds)} · All-time {formatDuration(stats.core.timeAllTime)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Clock Window Summary Pill Strip */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Avg Study Window (30d)
+              </span>
+              <span className="font-mono text-sm font-semibold text-ink tabular-nums">
+                {formatMinuteOfDay(stats.schedule.avgStartMinuteOfDay)} → {formatMinuteOfDay(stats.schedule.avgFinishMinuteOfDay)}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Study Rhythm
+              </span>
+              <span className="font-mono text-sm font-semibold text-ink flex items-center gap-1.5">
+                {stats.behavior.rhythm === "Night Owl" ? (
+                  <Moon className="h-3.5 w-3.5 text-clay" />
+                ) : (
+                  <Sun className="h-3.5 w-3.5 text-clay" />
+                )}
+                {stats.behavior.rhythm}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-line/30 bg-surface-soft px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Best Day Record
+              </span>
+              <span className="font-mono text-sm font-semibold text-ink tabular-nums">
+                {stats.core.bestDay ? formatDuration(stats.core.bestDay.seconds) : "0m"}
+              </span>
+            </div>
+          </div>
+
+          {/* Trend + Recent Sessions */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <Card className="lg:col-span-8 border-line bg-surface rounded-3xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-ink">
+                    <TrendingUp className="h-4 w-4 text-clay" />
+                    Last 7 Days Focus
+                  </h3>
+                  <p className="text-xs text-ink-muted">
+                    Midnight-split daily focus duration (today in clay)
+                  </p>
+                </div>
+                <Badge variant="outline" className="font-mono text-xs">
+                  Week: {formatDuration(stats.core.timeThisWeek)}
+                </Badge>
+              </div>
+              <Overview sessions={allSessions ?? []} />
+            </Card>
+
+            <Card className="lg:col-span-4 border-line bg-surface rounded-3xl overflow-hidden flex flex-col">
+              <CardHeader className="border-b border-line/15 py-4 px-5">
+                <CardTitle className="text-sm font-semibold text-ink">Recent Sessions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 overflow-y-auto max-h-[300px]">
+                <RecentSessions />
+              </CardContent>
+              <div className="p-3 border-t border-line/15 text-center bg-surface-soft">
+                <Link
+                  href="/history"
+                  className="font-mono text-[11px] font-semibold text-ink hover:text-clay uppercase tracking-wider"
+                >
+                  Open Calendar &amp; Timeline →
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          {/* Subject Balance */}
+          <Card className="border-line bg-surface rounded-3xl">
+            <CardHeader className="border-b border-line/15 pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
+                <PieChart className="h-4 w-4 text-clay" />
+                Subject Focus Balance
+              </CardTitle>
+              <CardDescription className="text-xs text-ink-muted">
+                All-time distribution &amp; 7-day stability per subject
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-5">
+              {stats.subjects.distribution.length === 0 ? (
+                <p className="text-sm text-ink-muted">Add subjects to view per-subject analytics.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {stats.subjects.distribution.map((sub) => (
+                    <div key={sub.id} className="space-y-2 rounded-2xl border border-line/20 bg-surface-soft p-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full border border-line/30 shrink-0"
+                            style={{ backgroundColor: sub.color }}
+                          />
+                          <span className="text-sm font-semibold text-ink truncate">{sub.name}</span>
+                        </div>
+                        <span className="font-mono text-xs font-semibold text-ink tabular-nums">
+                          {formatDuration(sub.totalTime)}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-surface border border-line/20 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${sub.consistency}%`, backgroundColor: sub.color }}
+                        />
+                      </div>
+                      <div className="flex justify-between font-mono text-[10px] text-ink-muted">
+                        <span>{sub.sessionCount} sessions · Today {formatDuration(sub.todayTime)}</span>
+                        <span>{Math.round(sub.consistency)}% week</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stats.subjects.neglected.length > 0 && (
+                <div className="p-3.5 rounded-2xl border border-line/30 bg-accent-soft/40 flex items-center gap-3 text-xs text-ink">
+                  <ZapOff className="h-4 w-4 text-clay shrink-0" />
+                  <span>
+                    Needs attention (inactive 3+ days):{" "}
+                    <strong>{stats.subjects.neglected.join(", ")}</strong>
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 24-Hour Rhythm + Habit Study Band */}
+          <Card className="border-line bg-surface rounded-3xl">
+            <CardHeader className="border-b border-line/15 pb-3 flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-ink">
+                  <Calendar className="h-4 w-4 text-clay" />
+                  24-Hour Time Distribution
+                </CardTitle>
+                <CardDescription className="text-xs text-ink-muted">
+                  Orange bottom band highlights hours studied on 50%+ of your active days
+                </CardDescription>
+              </div>
+              <Badge className="bg-highlight text-ink border border-line font-mono text-xs">
+                Peak: {stats.behavior.bestHour.label}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-5">
+              <div className="flex flex-col gap-2">
+                <div className="h-40 flex items-end gap-1">
+                  {stats.behavior.hourHeatmap.map((h, i) => {
+                    const maxTotal = stats.behavior.bestHour.total || 1;
+                    const pct = (h.total / maxTotal) * 100;
+                    const hasData = h.total > 0;
+                    const isHabit = stats.schedule.habitHourBand[i];
+                    return (
+                      <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-1">
+                        <div
+                          className={cn(
+                            "w-full rounded-t-md border transition-all",
+                            hasData
+                              ? i === stats.behavior.bestHour.hour
+                                ? "bg-clay border-line"
+                                : "bg-accent-soft border-line/40"
+                              : "bg-surface-soft border-line/15"
+                          )}
+                          style={{ height: `${Math.max(hasData ? 10 : 5, pct)}%` }}
+                          title={`${h.label}: ${formatDuration(h.total)} (${h.activeDayPct}% of studied days)`}
+                        />
+                        <div
+                          className={cn(
+                            "w-full h-1.5 rounded-full",
+                            isHabit ? "bg-clay" : "bg-surface-muted"
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between font-mono text-[10px] text-ink-muted pt-1">
+                  {[0, 4, 8, 12, 16, 20].map((hr) => (
+                    <span key={hr}>{stats.behavior.hourHeatmap[hr].label}</span>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Rooms */}
+          <div className="space-y-3">
+            <h3 className="font-mono text-xs uppercase tracking-[0.14em] text-ink-muted flex items-center gap-2">
+              <Users className="h-4 w-4 text-clay" />
+              Study Rooms
+            </h3>
+            {rooms.length === 0 ? (
+              <Link
+                href="/rooms"
+                className="block rounded-2xl border border-line bg-surface px-5 py-4 text-sm text-ink-muted hover:bg-surface-soft transition-colors"
+              >
+                Join or create a study room to study live with peers →
+              </Link>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {rooms.map((room) => (
+                  <Link
+                    key={room.id}
+                    href={`/rooms/${room.id}`}
+                    className="rounded-2xl border border-line bg-surface px-4 py-3.5 flex items-center justify-between hover:bg-surface-soft transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-ink truncate">{room.name}</p>
+                      <p className="text-xs text-ink-muted">
+                        {room.totalMemberCount} member{room.totalMemberCount !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span className="font-mono text-xs font-semibold text-clay shrink-0 ml-3">
+                      Open →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "insights" && (
+        <YptInsights
+          stats={stats}
+          sessions={allSessions ?? []}
+          subjects={allSubjects ?? []}
+          dayMeta={userData?.dayMeta}
+          todos={userData?.studyTodos}
+        />
+      )}
+
+      {tab === "habits" && (
+        <div className="space-y-6">
+          <HabitAnalytics analytics={habitAnalytics} />
+          <Card className="border-line bg-surface rounded-3xl">
+            <CardContent className="p-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                  Subject To-Dos &amp; Carry-Over
+                </p>
+                <p className="text-base font-semibold text-ink mt-1">
+                  Today: {stats.todos.todayCompleted} / {stats.todos.todayTotal} tasks done ({stats.todos.todayAchievementPct}%)
+                </p>
+                <p className="text-xs text-ink-muted">
+                  7-day achievement: {stats.todos.completed7d} / {stats.todos.total7d} completed
+                </p>
+              </div>
+              <Button asChild className="rounded-full bg-clay text-ink border border-line hover:bg-clay/90 font-semibold">
+                <Link href="/routine">Open Routine &amp; To-Dos →</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
 }

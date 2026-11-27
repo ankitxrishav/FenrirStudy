@@ -5,7 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { useTimer } from '@/hooks/use-timer';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { Subject, User } from '@/lib/definitions';
-import { getPeriodKeys } from '@/lib/study-time';
+import { getPeriodKeys, pickMainDday } from '@/lib/study-time';
 
 /**
  * Lightweight immediate sync on room entry. Global state transitions & heartbeats
@@ -30,6 +30,8 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
     const subject = subjects.find((s) => s.id === selectedSubjectId) ?? null;
     const timerStatus = isActive ? 'running' : isPaused ? 'paused' : 'stopped';
     const memberStatus = isActive ? 'studying' : isPaused ? 'break' : 'idle';
+    const mainDday = pickMainDday(userData?.ddays, userData?.mainDdayId);
+    const isDayOffToday = Boolean(userData?.dayMeta?.[keys.todayDateKey]?.isDayOff);
 
     updateDoc(memberRef, {
       status: memberStatus,
@@ -44,8 +46,11 @@ export function useRoomPresence(roomId: string, subjects: Subject[]) {
       monthlyStatsKey: keys.monthKey,
       todaySessions: userData?.todayStatsDate === keys.todayDateKey || !userData?.todayStatsDate ? (userData?.todaySessions ?? 0) : 0,
       todaySeconds: userData?.todayStatsDate === keys.todayDateKey || !userData?.todayStatsDate ? (userData?.todaySeconds ?? 0) : 0,
+      isDayOffToday,
+      mainDdayTitle: mainDday?.title ?? null,
+      mainDdayDate: mainDday?.targetDate ?? null,
     }).catch(() => {});
-  }, [user, firestore, roomId, mode, isActive, isPaused, selectedSubjectId, subjects, userData?.todaySeconds, userData?.todaySessions, userData?.todayStatsDate]);
+  }, [user, firestore, roomId, mode, isActive, isPaused, selectedSubjectId, subjects, userData?.todaySeconds, userData?.todaySessions, userData?.todayStatsDate, userData?.ddays, userData?.mainDdayId, userData?.dayMeta]);
 }
 
 export function useFinishBroadcast(_roomId: string) {

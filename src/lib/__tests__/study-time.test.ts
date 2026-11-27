@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildStudyReportCsv,
   computePeriodicStats,
   computeRunningTimerTodaySeconds,
   computeStudyStatistics,
+  formatDdayBadge,
   formatLocalDateKey,
+  formatMinuteOfDay,
   getEffectiveMemberPeriodStats,
   splitIntervalByLocalDays,
   splitIntervalByLocalHours,
@@ -24,6 +27,15 @@ const MATH_SUB: Subject = {
   userId: 'u1',
   name: 'Mathematics',
   color: '#F36B32',
+  archived: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
+const PHYS_SUB: Subject = {
+  id: 'sub-phys',
+  userId: 'u1',
+  name: 'Physics',
+  color: '#395B72',
   archived: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
@@ -64,7 +76,6 @@ test('cross-midnight session (Nov 27 21:00 -> Nov 28 02:00) splits 3h on Nov 27 
     focusScore: 100,
   };
 
-  // Checked on Nov 28 at 10:00 AM
   const nowNov28 = localMs(2026, 11, 28, 10, 0, 0);
   const periodic = computePeriodicStats([session], 'sub-math', nowNov28);
   assert.equal(periodic.today.seconds, 2 * 3600);
@@ -81,7 +92,7 @@ test('cross-midnight session (Nov 27 21:00 -> Nov 28 02:00) splits 3h on Nov 27 
   assert.equal(fullStats.calendarByDate['2026-11-28'].totalSeconds, 2 * 3600);
   assert.equal(fullStats.calendarByDate['2026-11-28'].slices[0].continuesFromPrevDay, true);
   assert.equal(fullStats.calendarByDate['2026-11-27'].slices[0].continuesIntoNextDay, true);
-  assert.equal(fullStats.core.currentStreak, 2); // 3h yesterday (>=2h) + 2h today (>=2h)
+  assert.equal(fullStats.core.currentStreak, 2);
 });
 
 test('pause gaps across midnight attribute only focused segments to true wall-clock dates and hours', () => {
@@ -104,8 +115,8 @@ test('pause gaps across midnight attribute only focused segments to true wall-cl
 
   const nowNov28 = localMs(2026, 11, 28, 9, 0, 0);
   const stats = computeStudyStatistics([session], [MATH_SUB], 1, nowNov28);
-  assert.equal(stats.calendarByDate['2026-11-27'].totalSeconds, 3600); // 30m @20h + 30m @23h
-  assert.equal(stats.calendarByDate['2026-11-28'].totalSeconds, 3600); // 60m @00h
+  assert.equal(stats.calendarByDate['2026-11-27'].totalSeconds, 3600);
+  assert.equal(stats.calendarByDate['2026-11-28'].totalSeconds, 3600);
   assert.equal(stats.behavior.hourHeatmap[20].total, 1800);
   assert.equal(stats.behavior.hourHeatmap[21].total, 0);
   assert.equal(stats.behavior.hourHeatmap[23].total, 1800);
@@ -118,8 +129,8 @@ test('week and month boundaries split sessions accurately (Sun Nov 29 22:00 -> M
     userId: 'u1',
     subjectId: 'sub-math',
     mode: 'stopwatch',
-    startTime: isoLocal(2026, 11, 29, 22, 0, 0), // Sunday
-    endTime: isoLocal(2026, 11, 30, 1, 0, 0),   // Monday
+    startTime: isoLocal(2026, 11, 29, 22, 0, 0),
+    endTime: isoLocal(2026, 11, 30, 1, 0, 0),
     duration: 3 * 3600,
     pauseCount: 0,
     status: 'stopped',
@@ -131,8 +142,8 @@ test('week and month boundaries split sessions accurately (Sun Nov 29 22:00 -> M
     userId: 'u1',
     subjectId: 'sub-math',
     mode: 'stopwatch',
-    startTime: isoLocal(2026, 11, 30, 23, 0, 0), // Nov 30 (Monday)
-    endTime: isoLocal(2026, 12, 1, 1, 0, 0),     // Dec 1 (Tuesday)
+    startTime: isoLocal(2026, 11, 30, 23, 0, 0),
+    endTime: isoLocal(2026, 12, 1, 1, 0, 0),
     duration: 2 * 3600,
     pauseCount: 0,
     status: 'stopped',
@@ -142,10 +153,10 @@ test('week and month boundaries split sessions accurately (Sun Nov 29 22:00 -> M
   const dec1 = localMs(2026, 12, 1, 12, 0, 0);
   const periodicDec1 = computePeriodicStats([sunToMon, novToDec], 'sub-math', dec1);
 
-  assert.equal(periodicDec1.today.seconds, 3600); // Only Dec 1 00:00->01:00
-  assert.equal(periodicDec1.yesterday.seconds, 2 * 3600); // Mon Nov 30: 00:00->01:00 + 23:00->24:00
-  assert.equal(periodicDec1.weekly.seconds, 3 * 3600); // Week starting Mon Nov 30 = 1h (Mon AM) + 1h (Mon PM) + 1h (Tue AM)
-  assert.equal(periodicDec1.monthly.seconds, 3600); // December = 1h
+  assert.equal(periodicDec1.today.seconds, 3600);
+  assert.equal(periodicDec1.yesterday.seconds, 2 * 3600);
+  assert.equal(periodicDec1.weekly.seconds, 3 * 3600);
+  assert.equal(periodicDec1.monthly.seconds, 3600);
   assert.equal(periodicDec1.allTime.seconds, 5 * 3600);
 });
 
@@ -177,7 +188,7 @@ test('overlapping multi-device duplicate sessions do not double-count duration',
 
   const now = localMs(2026, 11, 27, 23, 0, 0);
   const periodic = computePeriodicStats([s1, s2Dup], 'sub-math', now);
-  assert.equal(periodic.today.seconds, 5400); // 1.5h union, not 2.0h
+  assert.equal(periodic.today.seconds, 5400);
 });
 
 test('running timer across midnight and peer stats cache expiration compute exact today delta', () => {
@@ -194,7 +205,7 @@ test('running timer across midnight and peer stats cache expiration compute exac
     },
     nowAfterMidnight
   );
-  assert.equal(todayRunning, 600); // 10 minutes on Nov 28, not 20 minutes!
+  assert.equal(todayRunning, 600);
 
   const peerMember = {
     todaySeconds: 10800,
@@ -211,9 +222,93 @@ test('running timer across midnight and peer stats cache expiration compute exac
   };
 
   const effToday = getEffectiveMemberPeriodStats(peerMember, 'today', nowAfterMidnight);
-  assert.equal(effToday.seconds, 600); // Yesterday's 3h expired at midnight, plus 10m since midnight
+  assert.equal(effToday.seconds, 600);
   assert.equal(effToday.sessions, 0);
 
   const effWeek = getEffectiveMemberPeriodStats(peerMember, 'weekly', nowAfterMidnight);
-  assert.equal(effWeek.seconds, 10800 + 1200); // Same week -> base 3h + full 20m running
+  assert.equal(effWeek.seconds, 10800 + 1200);
+});
+
+test('YPT advanced analytics compute 20m focus histogram, study/rest efficiency, day-off streak protection, stacked bars, and CSV report', () => {
+  const sNov25: Session = {
+    id: 'd25',
+    userId: 'u1',
+    subjectId: 'sub-math',
+    mode: 'pomodoro',
+    startTime: isoLocal(2026, 11, 25, 8, 0, 0),
+    endTime: isoLocal(2026, 11, 25, 9, 15, 0), // 75m -> bucket 3 (60-80m)
+    duration: 75 * 60,
+    pauseCount: 0,
+    status: 'completed',
+    focusScore: 100,
+  };
+  const sNov27a: Session = {
+    id: 'd27a',
+    userId: 'u1',
+    subjectId: 'sub-math',
+    mode: 'stopwatch',
+    startTime: isoLocal(2026, 11, 27, 8, 30, 0),
+    endTime: isoLocal(2026, 11, 27, 9, 0, 0), // 30m -> bucket 1 (20-40m)
+    duration: 30 * 60,
+    pauseCount: 0,
+    status: 'stopped',
+    focusScore: 100,
+  };
+  const sNov27b: Session = {
+    id: 'd27b',
+    userId: 'u1',
+    subjectId: 'sub-phys',
+    mode: 'stopwatch',
+    startTime: isoLocal(2026, 11, 27, 9, 20, 0), // 20m break gap before this
+    endTime: isoLocal(2026, 11, 27, 11, 30, 0), // 130m -> bucket 6 (120m+)
+    duration: 130 * 60,
+    pauseCount: 0,
+    status: 'stopped',
+    focusScore: 100,
+  };
+
+  const now = localMs(2026, 11, 27, 15, 0, 0);
+  const stats = computeStudyStatistics(
+    [sNov25, sNov27a, sNov27b],
+    [MATH_SUB, PHYS_SUB],
+    1, // 1h/day target
+    now,
+    {
+      dayMeta: {
+        '2026-11-26': { isDayOff: true, dayOffReason: 'Rest' },
+        '2026-11-27': {
+          closingRating: 5,
+          closingComment: 'Solid physics session',
+          breaks: [{ id: 'b1', dateKey: '2026-11-27', startTime: isoLocal(2026, 11, 27, 9, 0, 0), endTime: isoLocal(2026, 11, 27, 9, 20, 0), durationSeconds: 1200, tag: 'Meal' }],
+        },
+      },
+      todos: [
+        { id: 't1', subjectId: 'sub-math', text: 'Ch1', dateKey: '2026-11-27', completed: true, createdAt: isoLocal(2026, 11, 27, 8, 0) },
+        { id: 't2', subjectId: 'sub-phys', text: 'Ch2', dateKey: '2026-11-27', completed: false, createdAt: isoLocal(2026, 11, 27, 8, 0) },
+      ],
+    }
+  );
+
+  // Nov 26 was a Day Off between Nov 25 (>=1h) and Nov 27 (>=1h) -> 2-day streak preserved!
+  assert.equal(stats.core.currentStreak, 2);
+  assert.equal(stats.core.dayOffCount30d, 1);
+  assert.equal(stats.core.studiedDays30d, 2);
+  assert.equal(stats.core.maxContinuousSeconds, 130 * 60);
+  assert.equal(stats.focusHistogram[1].count, 1); // 20-40m
+  assert.equal(stats.focusHistogram[3].count, 1); // 60-80m
+  assert.equal(stats.focusHistogram[6].count, 1); // 120m+
+  assert.equal(stats.breaks.todayBreakSeconds, 1200);
+  assert.equal(stats.breaks.byTag[0].tag, 'Meal');
+  assert.equal(stats.schedule.avgStartMinuteOfDay, 8 * 60 + 15);
+  assert.equal(formatMinuteOfDay(stats.schedule.avgStartMinuteOfDay), '08:15');
+  assert.equal(stats.todos.todayAchievementPct, 50);
+  assert.equal(stats.trends.thresholdRates120d[0].dayCount, 2); // both Nov 25 (75m) & Nov 27 (160m) >= 1h
+  assert.equal(formatDdayBadge('2026-12-07', '2026-11-27').label, 'D-10');
+  assert.equal(formatDdayBadge('2026-11-27', '2026-11-27').label, 'D-DAY');
+
+  const csv = buildStudyReportCsv([sNov25, sNov27a, sNov27b], [MATH_SUB, PHYS_SUB], {
+    '2026-11-27': { closingRating: 5, isDayOff: false },
+  });
+  assert.match(csv, /2026-11-27,"Physics"/);
+  assert.match(csv, /2026-11-27,"Mathematics"/);
 });

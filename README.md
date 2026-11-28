@@ -3,6 +3,7 @@
 
 
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fenrirstudy.vercel.app/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-Deploy-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://fenrirstudy.ankitkrpt.workers.dev/)
 [![Android App](https://img.shields.io/badge/Android_APK-Download_v1.3.0-F36B32?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ankitxrishav/FenrirStudy-App/releases/latest/download/FenrirStudy-v1.3.0.apk)
 [![Android Repo](https://img.shields.io/badge/Android_Repo-FenrirStudy--App-24201B?style=for-the-badge&logo=github&logoColor=FFF9EF)](https://github.com/ankitxrishav/FenrirStudy-App)
 [![Netlify](https://img.shields.io/badge/Netlify-Deploy-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://fenrirstudy.netlify.app/)
@@ -65,6 +66,7 @@ Modern, full-stack study tracker to time sessions, manage subjects, and visualiz
 
 ## Live Demos
 - Vercel: https://fenrirstudy.vercel.app/
+- Cloudflare Workers: https://fenrirstudy.ankitkrpt.workers.dev/
 - Netlify: https://fenrirstudy.netlify.app/
 
 ## Core Features

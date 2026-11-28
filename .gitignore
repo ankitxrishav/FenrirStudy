@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Firebase Admin SDK private key
 /fenrirstudyx-firebase-adminsdk-fbsvc-c457901450.json
+
+.open-next/
+.wrangler/
+.dev.vars
